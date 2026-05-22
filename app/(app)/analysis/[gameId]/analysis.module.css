@@ -118,10 +118,15 @@
 }
 
 .graph {
+  max-width: 100%;
+  min-width: 0;
   height: 140px;
   display: flex;
   align-items: end;
   gap: 5px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-inline: contain;
   border: 1px solid var(--line);
   border-radius: var(--radius);
   padding: 10px;
@@ -133,7 +138,7 @@
 
 .barWrap {
   min-width: 6px;
-  flex: 1 1 8px;
+  flex: 1 0 6px;
   height: 100%;
   display: flex;
   align-items: end;

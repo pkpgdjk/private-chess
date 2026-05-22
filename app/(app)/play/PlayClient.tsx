@@ -56,17 +56,40 @@ export function PlayClient({ username }: PlayClientProps) {
   const resetGame = useGameStore((state) => state.resetGame);
   const undoMove = useGameStore((state) => state.undoMove);
   const resumeActiveGame = useGameStore((state) => state.resumeActiveGame);
+  const canUndo = useGameStore((state) => state.canUndo);
 
   const settings = useSettingsStore((state) => state.settings);
+  const isSettingsLoading = useSettingsStore((state) => state.isLoading);
   const loadSettings = useSettingsStore((state) => state.loadSettings);
   const updateSettings = useSettingsStore((state) => state.updateSettings);
-  const allowUndo = settings.allowUndo && history.length > 0;
+  const allowUndo = settings.allowUndo && canUndo();
   const status = useGameStatus();
 
   useEffect(() => {
-    void loadSettings();
-    void resumeActiveGame();
-  }, [loadSettings, resumeActiveGame]);
+    let isMounted = true;
+
+    async function hydrateGame() {
+      await loadSettings();
+
+      if (!isMounted) {
+        return;
+      }
+
+      const hadActiveGame = await resumeActiveGame();
+
+      if (!isMounted || hadActiveGame) {
+        return;
+      }
+
+      resetGame(useSettingsStore.getState().settings.playerColor);
+    }
+
+    void hydrateGame();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [loadSettings, resetGame, resumeActiveGame]);
 
   useEffect(() => {
     if (turn === playerColor || isGameOver) {
@@ -110,7 +133,7 @@ export function PlayClient({ username }: PlayClientProps) {
 
       <div className="play-panel" aria-label="Game controls">
         <div className="play-panel__status">
-          <span>{status}</span>
+          <span>{isSettingsLoading ? 'Loading board' : status}</span>
           <strong>{colorName(turn)} to move</strong>
         </div>
 

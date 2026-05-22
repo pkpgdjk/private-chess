@@ -56,4 +56,27 @@ describe('useGameStore', () => {
     expect(useGameStore.getState().history).toHaveLength(2);
     expect(useGameStore.getState().turn).toBe('w');
   });
+
+  it('keeps the bot opening move when black undoes a player move', () => {
+    useGameStore.getState().resetGame('b');
+    const openingFen = useGameStore.getState().fen;
+
+    expect(useGameStore.getState().history).toHaveLength(1);
+    expect(useGameStore.getState().turn).toBe('b');
+    expect(useGameStore.getState().canUndo()).toBe(false);
+
+    useGameStore.getState().makeMove('e7', 'e5');
+    expect(useGameStore.getState().canUndo()).toBe(true);
+
+    useGameStore.getState().undoMove();
+
+    expect(useGameStore.getState().history).toHaveLength(1);
+    expect(useGameStore.getState().fen).toBe(openingFen);
+    expect(useGameStore.getState().turn).toBe('b');
+    expect(useGameStore.getState().canUndo()).toBe(false);
+  });
+
+  it('reports whether an active game was resumed', async () => {
+    await expect(useGameStore.getState().resumeActiveGame()).resolves.toBe(false);
+  });
 });

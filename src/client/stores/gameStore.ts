@@ -26,12 +26,13 @@ type ActiveGameResponse = {
 
 type GameStore = GameState & {
   turn: 'w' | 'b';
+  canUndo: () => boolean;
   resetGame: (playerColor?: 'w' | 'b') => void;
   selectSquare: (square: string) => void;
   makeMove: (from: string, to: string) => boolean;
   makeBotMove: () => boolean;
   undoMove: () => void;
-  resumeActiveGame: () => Promise<void>;
+  resumeActiveGame: () => Promise<boolean>;
   clearHint: () => void;
 };
 
@@ -183,8 +184,18 @@ function resetPositionForPlayer(playerColor: 'w' | 'b') {
   };
 }
 
+function getMinimumHistoryLength(playerColor: 'w' | 'b') {
+  return playerColor === 'b' ? 1 : 0;
+}
+
 export const useGameStore = create<GameStore>((set, get) => ({
   ...makeInitialState(),
+
+  canUndo: () => {
+    const { currentMoveIndex, history, playerColor } = get();
+
+    return history.length > 0 && currentMoveIndex > getMinimumHistoryLength(playerColor);
+  },
 
   resetGame: (playerColor) => {
     const nextPlayerColor = playerColor ?? get().playerColor;
@@ -272,8 +283,13 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
   undoMove: () => {
     const { history, currentMoveIndex, playerColor } = get();
-    const undoPlies = playerColor === 'w' ? 2 : 2;
-    const nextMoveIndex = Math.max(0, currentMoveIndex - undoPlies);
+    const minimumHistoryLength = getMinimumHistoryLength(playerColor);
+
+    if (currentMoveIndex <= minimumHistoryLength) {
+      return;
+    }
+
+    const nextMoveIndex = Math.max(minimumHistoryLength, currentMoveIndex - 2);
     const nextHistory = history.slice(0, nextMoveIndex);
     const chess = chessFromHistory(nextHistory, nextHistory.length);
 
@@ -293,7 +309,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     const { activeGame } = await apiJson<ActiveGameResponse>('/api/active-game');
 
     if (!activeGame) {
-      return;
+      return false;
     }
 
     const currentMoveIndex = Math.min(
@@ -316,6 +332,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
           }
         : null,
     });
+
+    return true;
   },
 
   clearHint: () => {

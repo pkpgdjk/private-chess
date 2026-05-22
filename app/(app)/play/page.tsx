@@ -1,8 +1,15 @@
-export default function PlayPage() {
-  return (
-    <section className="home-panel" aria-labelledby="play-title">
-      <p className="eyebrow">Board</p>
-      <h1 id="play-title">Play</h1>
-    </section>
-  );
+import { redirect } from 'next/navigation';
+
+import { getCurrentUser } from '@/server/auth/currentUser';
+
+import { PlayClient } from './PlayClient';
+
+export default async function PlayPage() {
+  const user = await getCurrentUser();
+
+  if (!user) {
+    redirect('/login');
+  }
+
+  return <PlayClient username={user.username} />;
 }

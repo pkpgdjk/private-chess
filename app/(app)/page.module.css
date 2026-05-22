@@ -1,0 +1,182 @@
+.dashboard {
+  width: 100%;
+  max-width: 1120px;
+  margin: 0 auto;
+  display: grid;
+  gap: 16px;
+}
+
+.header {
+  display: grid;
+  gap: 10px;
+}
+
+.titleRow {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.header h1 {
+  max-width: 660px;
+  margin: 0;
+  color: var(--text-strong);
+  font-size: 2.35rem;
+  font-weight: 900;
+  letter-spacing: 0;
+  line-height: 0.94;
+}
+
+.statusPill {
+  display: none;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 9px 11px;
+  background: rgba(255, 250, 243, 0.72);
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 850;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.summary {
+  max-width: 620px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 1rem;
+  font-weight: 650;
+}
+
+.quickGrid,
+.statGrid,
+.practiceGrid {
+  display: grid;
+  gap: 10px;
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.sectionHeader h2 {
+  margin: 0;
+  color: var(--text-strong);
+  font-size: 1rem;
+  font-weight: 900;
+  line-height: 1.1;
+}
+
+.sectionHeader span {
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.statCard {
+  display: grid;
+  gap: 4px;
+}
+
+.statValue {
+  color: var(--text-strong);
+  font-size: 1.55rem;
+  font-weight: 950;
+  line-height: 1;
+}
+
+.statLabel {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-weight: 800;
+}
+
+.lessonCard {
+  display: grid;
+  gap: 10px;
+}
+
+.lessonTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.lessonName {
+  margin: 0;
+  color: var(--text-strong);
+  font-size: 1rem;
+  font-weight: 900;
+  line-height: 1.15;
+}
+
+.lessonTag {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 6px 8px;
+  background: #fffdf9;
+  color: #6f4d35;
+  font-size: 0.78rem;
+  font-weight: 850;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.lessonBody {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+  font-weight: 650;
+  line-height: 1.42;
+}
+
+@media (min-width: 620px) {
+  .dashboard {
+    gap: 20px;
+  }
+
+  .header h1 {
+    font-size: 3.25rem;
+  }
+
+  .statusPill {
+    display: block;
+  }
+
+  .quickGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .statGrid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 940px) {
+  .dashboard {
+    grid-template-columns: minmax(0, 1fr) 320px;
+    align-items: start;
+  }
+
+  .header h1 {
+    font-size: 4rem;
+  }
+
+  .header,
+  .quickGrid,
+  .sectionHeader:first-of-type {
+    grid-column: 1 / -1;
+  }
+
+  .practiceGrid {
+    position: sticky;
+    top: 32px;
+  }
+}

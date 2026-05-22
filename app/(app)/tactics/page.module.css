@@ -1,0 +1,146 @@
+.tactics {
+  width: 100%;
+  max-width: 1120px;
+  margin: 0 auto;
+  display: grid;
+  gap: 16px;
+}
+
+.header {
+  display: grid;
+  gap: 10px;
+}
+
+.header h1 {
+  margin: 0;
+  color: var(--text-strong);
+  font-size: 2.25rem;
+  font-weight: 900;
+  letter-spacing: 0;
+  line-height: 0.98;
+}
+
+.summary {
+  max-width: 680px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 1rem;
+  font-weight: 650;
+}
+
+.laneGrid,
+.openingGrid {
+  display: grid;
+  gap: 10px;
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.sectionHeader h2 {
+  margin: 0;
+  color: var(--text-strong);
+  font-size: 1rem;
+  font-weight: 900;
+  line-height: 1.1;
+}
+
+.sectionHeader span {
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.laneCard,
+.openingCard {
+  display: grid;
+  gap: 10px;
+}
+
+.cardTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.cardTop h3 {
+  margin: 0;
+  color: var(--text-strong);
+  font-size: 1rem;
+  font-weight: 900;
+  line-height: 1.15;
+}
+
+.badge {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 6px 8px;
+  background: #fffdf9;
+  color: #6f4d35;
+  font-size: 0.78rem;
+  font-weight: 850;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.body,
+.moves,
+.prompt {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+  font-weight: 650;
+  line-height: 1.42;
+}
+
+.moves {
+  color: #4e3b2d;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font-weight: 800;
+}
+
+.prompt {
+  border-top: 1px solid var(--line);
+  padding-top: 10px;
+}
+
+@media (min-width: 620px) {
+  .tactics {
+    gap: 20px;
+  }
+
+  .header h1 {
+    font-size: 3rem;
+  }
+
+  .laneGrid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .openingGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1020px) {
+  .tactics {
+    grid-template-columns: 300px minmax(0, 1fr);
+    align-items: start;
+  }
+
+  .header,
+  .laneGrid,
+  .sectionHeader:first-of-type {
+    grid-column: 1 / -1;
+  }
+
+  .openingGrid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}

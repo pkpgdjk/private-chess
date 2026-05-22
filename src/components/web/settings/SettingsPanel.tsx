@@ -54,6 +54,23 @@ const languageOptions: Option<Settings['coachLanguage']>[] = [
   { value: 'th', label: 'Thai' },
 ];
 
+type CoachModelSettings = Pick<Settings, 'coachProvider' | 'coachModel'>;
+
+export function getCompatibleCoachModel(settings: CoachModelSettings) {
+  const providerModels = modelOptions[settings.coachProvider];
+  const modelIsAvailable = providerModels.some(
+    (option) => option.value === settings.coachModel,
+  );
+
+  return modelIsAvailable ? settings.coachModel : providerModels[0].value;
+}
+
+export function getCoachModelNormalizationPatch(settings: CoachModelSettings) {
+  const coachModel = getCompatibleCoachModel(settings);
+
+  return coachModel === settings.coachModel ? null : { coachModel };
+}
+
 function patchSetting<K extends keyof Settings>(
   onPatch: SettingsPanelProps['onPatch'],
   key: K,
@@ -157,12 +174,7 @@ export function SettingsPanel({
   onPatch,
 }: SettingsPanelProps) {
   const providerModels = modelOptions[settings.coachProvider];
-  const modelIsAvailable = providerModels.some(
-    (option) => option.value === settings.coachModel,
-  );
-  const coachModel = modelIsAvailable
-    ? settings.coachModel
-    : providerModels[0].value;
+  const coachModel = getCompatibleCoachModel(settings);
 
   const updateProvider = (provider: CoachProvider) => {
     const firstModel = modelOptions[provider][0].value;

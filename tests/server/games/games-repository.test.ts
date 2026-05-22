@@ -8,7 +8,7 @@ describe('gamesRepository', () => {
   it('updates an existing user game when legacyLocalId is present', async () => {
     const userId = new ObjectId();
     const existingId = new ObjectId();
-    const existingDocument = {
+    const updatedDocument = {
       _id: existingId,
       userId,
       legacyLocalId: 'local-1',
@@ -22,21 +22,15 @@ describe('gamesRepository', () => {
       createdAt: new Date(),
       updatedAt: new Date(),
     };
-    const updatedDocument = {
-      ...existingDocument,
-      coachMessages: 'Good game',
-      updatedAt: new Date(),
-    };
-    const findOne = vi
-      .fn()
-      .mockResolvedValueOnce(existingDocument)
-      .mockResolvedValueOnce(updatedDocument);
-    const updateOne = vi.fn().mockResolvedValue({ modifiedCount: 1 });
+    const findOneAndUpdate = vi.fn().mockResolvedValue({
+      value: updatedDocument,
+      lastErrorObject: { updatedExisting: true },
+      ok: 1,
+    });
     const insertOne = vi.fn();
     const db = {
       collection: vi.fn(() => ({
-        findOne,
-        updateOne,
+        findOneAndUpdate,
         insertOne,
       })),
     } as unknown as Db;
@@ -48,12 +42,8 @@ describe('gamesRepository', () => {
       created: false,
     });
     expect(insertOne).not.toHaveBeenCalled();
-    expect(findOne).toHaveBeenNthCalledWith(1, {
-      userId,
-      legacyLocalId: 'local-1',
-    });
-    expect(updateOne).toHaveBeenCalledWith(
-      { _id: existingId, userId },
+    expect(findOneAndUpdate).toHaveBeenCalledWith(
+      { userId, legacyLocalId: 'local-1' },
       {
         $set: expect.objectContaining({
           date: 1779480000000,
@@ -65,18 +55,40 @@ describe('gamesRepository', () => {
           moveHistory: [],
           updatedAt: expect.any(Date),
         }),
+        $setOnInsert: expect.objectContaining({
+          _id: expect.any(ObjectId),
+          userId,
+          legacyLocalId: 'local-1',
+          createdAt: expect.any(Date),
+        }),
       },
+      expect.objectContaining({
+        includeResultMetadata: true,
+        returnDocument: 'after',
+        upsert: true,
+      }),
     );
-    expect(findOne).toHaveBeenNthCalledWith(2, { _id: existingId, userId });
   });
 
   it('inserts a new game when legacyLocalId has not been seen', async () => {
     const userId = new ObjectId();
-    const findOne = vi.fn().mockResolvedValue(null);
-    const insertOne = vi.fn().mockResolvedValue({ insertedId: new ObjectId() });
+    const insertedId = new ObjectId();
+    const findOneAndUpdate = vi.fn().mockResolvedValue({
+      value: {
+        _id: insertedId,
+        userId,
+        legacyLocalId: 'local-1',
+        ...completedGame(),
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+      lastErrorObject: { upserted: insertedId },
+      ok: 1,
+    });
+    const insertOne = vi.fn();
     const db = {
       collection: vi.fn(() => ({
-        findOne,
+        findOneAndUpdate,
         insertOne,
       })),
     } as unknown as Db;
@@ -85,21 +97,56 @@ describe('gamesRepository', () => {
 
     expect(saved.created).toBe(true);
     expect(saved.game).toEqual(expect.objectContaining({ result: 'win' }));
-    expect(insertOne).toHaveBeenCalledWith(
-      expect.objectContaining({
-        _id: expect.any(ObjectId),
+    expect(insertOne).not.toHaveBeenCalled();
+    expect(findOneAndUpdate).toHaveBeenCalledWith(
+      {
         userId,
         legacyLocalId: 'local-1',
-        date: 1779480000000,
-        pgn: '1. e4 e5',
-        result: 'win',
-        playerColor: 'w',
-        botStrength: 7,
-        coachMessages: 'Good game',
-        moveHistory: [],
-        createdAt: expect.any(Date),
-        updatedAt: expect.any(Date),
+      },
+      {
+        $set: expect.objectContaining({
+          date: 1779480000000,
+          pgn: '1. e4 e5',
+          result: 'win',
+          playerColor: 'w',
+          botStrength: 7,
+          coachMessages: 'Good game',
+          moveHistory: [],
+          updatedAt: expect.any(Date),
+        }),
+        $setOnInsert: expect.objectContaining({
+          _id: expect.any(ObjectId),
+          userId,
+          legacyLocalId: 'local-1',
+          createdAt: expect.any(Date),
+        }),
+      },
+      expect.objectContaining({
+        includeResultMetadata: true,
+        returnDocument: 'after',
+        upsert: true,
       }),
+    );
+  });
+
+  it('inserts games without a legacyLocalId as new rows', async () => {
+    const userId = new ObjectId();
+    const insertOne = vi.fn().mockResolvedValue({ insertedId: new ObjectId() });
+    const findOneAndUpdate = vi.fn();
+    const db = {
+      collection: vi.fn(() => ({
+        findOneAndUpdate,
+        insertOne,
+      })),
+    } as unknown as Db;
+
+    const { id: _legacyId, ...gameWithoutLegacyId } = completedGame();
+    const saved = await gamesRepository(db).save(userId, gameWithoutLegacyId);
+
+    expect(saved.created).toBe(true);
+    expect(findOneAndUpdate).not.toHaveBeenCalled();
+    expect(insertOne).toHaveBeenCalledWith(
+      expect.not.objectContaining({ legacyLocalId: expect.anything() }),
     );
   });
 });

@@ -81,36 +81,41 @@ export function gamesRepository(db: Db) {
     };
 
     if (game.id) {
-      const existingDocument = await games.findOne({
-        userId,
-        legacyLocalId: game.id,
-      });
+      const result = await games.findOneAndUpdate(
+        { userId, legacyLocalId: game.id },
+        {
+          $set: gameFields,
+          $setOnInsert: {
+            _id: new ObjectId(),
+            userId,
+            legacyLocalId: game.id,
+            createdAt: now,
+          },
+        },
+        {
+          includeResultMetadata: true,
+          returnDocument: 'after',
+          upsert: true,
+        },
+      );
 
-      if (existingDocument) {
-        await games.updateOne(
-          { _id: existingDocument._id, userId },
-          { $set: gameFields },
-        );
+      const document =
+        result.value ??
+        (await games.findOne({ userId, legacyLocalId: game.id }));
 
-        const updatedDocument = await games.findOne({
-          _id: existingDocument._id,
-          userId,
-        });
-
-        return {
-          game: toSavedGame(updatedDocument ?? {
-            ...existingDocument,
-            ...gameFields,
-          }),
-          created: false,
-        };
+      if (!document) {
+        throw new Error('Failed to save game');
       }
+
+      return {
+        game: toSavedGame(document),
+        created: Boolean(result.lastErrorObject?.upserted),
+      };
     }
 
     const document: GameDocument = {
       _id: new ObjectId(),
       userId,
-      legacyLocalId: game.id,
       ...gameFields,
       createdAt: now,
     };

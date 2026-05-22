@@ -46,6 +46,15 @@ describe('getIndexSpecs', () => {
         options: { name: 'games_user_date_desc' },
       },
       {
+        collection: 'games',
+        keys: { userId: 1, legacyLocalId: 1 },
+        options: {
+          unique: true,
+          partialFilterExpression: { legacyLocalId: { $type: 'string' } },
+          name: 'games_user_legacy_local_id_unique',
+        },
+      },
+      {
         collection: 'activeGames',
         keys: { userId: 1 },
         options: { unique: true, name: 'active_games_user_unique' },

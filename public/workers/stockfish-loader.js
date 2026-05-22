@@ -8,21 +8,36 @@ function postEngineLine(line) {
   self.postMessage(String(line));
 }
 
+function postEngineError(error) {
+  self.postMessage(`error engine unavailable: ${error instanceof Error ? error.message : String(error)}`);
+}
+
 function getEngine() {
   if (!enginePromise) {
-    self.importScripts(`${STOCKFISH_BASE_PATH}stockfish.js`);
+    try {
+      self.importScripts(`${STOCKFISH_BASE_PATH}stockfish.js`);
 
-    enginePromise = Stockfish({
-      locateFile(path) {
-        return `${STOCKFISH_BASE_PATH}${path}`;
-      },
-    });
+      enginePromise = Promise.resolve(
+        Stockfish({
+          locateFile(path) {
+            return `${STOCKFISH_BASE_PATH}${path}`;
+          },
+        }),
+      ).then(
+        (engine) => {
+          engine.addMessageListener(postEngineLine);
 
-    enginePromise.then((engine) => {
-      engine.addMessageListener(postEngineLine);
-
-      return engine;
-    });
+          return engine;
+        },
+        (error) => {
+          postEngineError(error);
+          throw error;
+        },
+      );
+    } catch (error) {
+      postEngineError(error);
+      enginePromise = Promise.reject(error);
+    }
   }
 
   return enginePromise;
@@ -31,11 +46,13 @@ function getEngine() {
 function sendCommand(command) {
   getEngine()
     .then((engine) => {
-      engine.postMessage(command);
+      try {
+        engine.postMessage(command);
+      } catch (error) {
+        postEngineError(error);
+      }
     })
-    .catch((error) => {
-      self.postMessage(`error ${error instanceof Error ? error.message : String(error)}`);
-    });
+    .catch(() => undefined);
 }
 
 self.addEventListener('message', (event) => {

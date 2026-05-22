@@ -37,10 +37,19 @@ export function playMoveSound({ enabled = true, volume = 0.18 }: MoveSoundOption
       return;
     }
 
+    if (context.state === 'suspended') {
+      void context.resume().catch(() => undefined);
+    }
+
     const oscillator = context.createOscillator();
     const gain = context.createGain();
     const startedAt = context.currentTime;
     const safeVolume = Math.max(0, Math.min(volume, 1));
+    const cleanup = () => {
+      oscillator.onended = null;
+      oscillator.disconnect();
+      gain.disconnect();
+    };
 
     oscillator.type = 'sine';
     oscillator.frequency.setValueAtTime(620, startedAt);
@@ -52,6 +61,7 @@ export function playMoveSound({ enabled = true, volume = 0.18 }: MoveSoundOption
 
     oscillator.connect(gain);
     gain.connect(context.destination);
+    oscillator.onended = cleanup;
     oscillator.start(startedAt);
     oscillator.stop(startedAt + 0.1);
   } catch {

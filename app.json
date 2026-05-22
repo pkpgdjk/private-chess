@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "Chess Trainer",
-    "slug": "chess-trainer",
+    "slug": "chess",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -12,7 +12,9 @@
       "resizeMode": "contain",
       "backgroundColor": "#1a1a2e"
     },
-    "assetBundlePatterns": ["**/*"],
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.rxnr.chesstrainer"
@@ -26,6 +28,16 @@
     "web": {
       "favicon": "./assets/favicon.png"
     },
-    "plugins": ["expo-sqlite", "expo-router"]
+    "plugins": [
+      "expo-sqlite",
+      "expo-router"
+    ],
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "608d88fc-b1a1-4ef3-9847-55b879a81fec"
+      }
+    },
+    "owner": "pkpgdjk"
   }
 }

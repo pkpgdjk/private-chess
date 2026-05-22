@@ -10,6 +10,8 @@ jobs:
   build-ios:
     name: EAS iOS build
     runs-on: ubuntu-latest
+    env:
+      EAS_BUILD_NO_EXPO_GO_WARNING: true
 
     steps:
       - name: Checkout
@@ -35,4 +37,3 @@ jobs:
 
       - name: Build iOS preview IPA
         run: eas build --platform ios --profile preview --non-interactive
-

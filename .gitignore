@@ -49,3 +49,9 @@ pnpm-debug.log*
 Thumbs.db
 .idea/
 .vscode/
+
+.next/
+.open-next/
+.wrangler/
+playwright-report/
+test-results/

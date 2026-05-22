@@ -35,6 +35,7 @@ credentials.json
 .memsearch/
 .claude/
 .superpowers/
+.worktrees/
 
 # Logs
 npm-debug.log*

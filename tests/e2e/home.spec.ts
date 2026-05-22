@@ -1,7 +1,8 @@
 import { expect, test } from '@playwright/test';
 
-test('shows the temporary home page', async ({ page }) => {
+test('redirects anonymous home visits to login', async ({ page }) => {
   await page.goto('/');
 
-  await expect(page.getByText('Chess Trainer')).toBeVisible();
+  await expect(page).toHaveURL(/\/login/);
+  await expect(page.getByRole('button', { name: 'Sign in' })).toBeVisible();
 });

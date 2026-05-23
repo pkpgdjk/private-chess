@@ -4,6 +4,12 @@
   "main": ".open-next/worker.js",
   "compatibility_date": "2026-05-23",
   "compatibility_flags": ["nodejs_compat"],
+  "observability": {
+    "logs": {
+      "enabled": false,
+      "invocation_logs": true
+    }
+  },
   "secrets": {
     "required": [
       "MONGODB_URI",

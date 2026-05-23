@@ -77,24 +77,7 @@ export function settingsRepository(db: Db) {
       return withApiKeyStatus(document.settings, document.encryptedApiKeys);
     }
 
-    const now = new Date();
-    const settings = withApiKeyStatus();
-
-    await userSettings.updateOne(
-      { userId: objectUserId },
-      {
-        $setOnInsert: {
-          _id: new ObjectId(),
-          userId: objectUserId,
-          settings: toStoredSettings(settings),
-          createdAt: now,
-          updatedAt: now,
-        },
-      },
-      { upsert: true },
-    );
-
-    return settings;
+    return withApiKeyStatus();
   }
 
   async function patchForUser(

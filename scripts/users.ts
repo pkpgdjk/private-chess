@@ -2,6 +2,7 @@ import { stdin as input, stdout as output } from 'node:process';
 import type { Readable, Writable } from 'node:stream';
 import { pathToFileURL } from 'node:url';
 
+import { loadLocalEnv } from './load-env';
 import { hashPassword } from '../src/server/auth/password';
 import { closeMongoClient } from '../src/server/db/client';
 import {
@@ -10,6 +11,8 @@ import {
   findByUsername,
   setPassword,
 } from '../src/server/repositories/users';
+
+loadLocalEnv();
 
 type Command = 'create' | 'reset-password' | 'disable';
 

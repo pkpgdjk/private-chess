@@ -16,8 +16,11 @@ Private Chess is a Next.js chess trainer with a custom username/password login, 
 1. Install dependencies:
 
 ```bash
+node --version
 npm install
 ```
+
+Use Node 22 or newer.
 
 2. Create `.env.local` from `.env.example`:
 
@@ -28,9 +31,9 @@ cp .env.example .env.local
 Set at least:
 
 ```text
-MONGODB_URI=...
+MONGODB_URI=mongodb+srv://...
 MONGODB_DB=private_chess
-AUTH_SESSION_SECRET=replace-with-a-long-random-secret
+AUTH_SESSION_SECRET=replace-with-at-least-32-characters
 ```
 
 AI coach keys are optional:
@@ -51,6 +54,8 @@ npm run db:indexes
 ```bash
 npm run user:create -- tokyo
 ```
+
+The password prompt requires at least 8 characters.
 
 5. Start the website:
 
@@ -85,7 +90,9 @@ Database setup:
 npm run db:indexes
 ```
 
-## Deploy To Cloudflare
+## Deploy To Cloudflare Workers
+
+This project is configured for Cloudflare Workers through OpenNext, not Cloudflare Pages.
 
 Build and preview the Worker locally:
 

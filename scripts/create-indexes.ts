@@ -1,5 +1,8 @@
+import { loadLocalEnv } from './load-env';
 import { closeMongoClient, getDb } from '../src/server/db/client';
 import { getCollectionName, getIndexSpecs } from '../src/server/db/indexes';
+
+loadLocalEnv();
 
 function printHelp() {
   console.log(`Usage: npm run db:indexes

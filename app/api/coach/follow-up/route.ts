@@ -4,7 +4,7 @@ import { NextResponse } from 'next/server';
 import { requireCurrentUser } from '@/server/auth/currentUser';
 import { toCoachErrorResponse } from '@/server/ai/errors';
 import { askFollowUpServer } from '@/server/ai/providers';
-import { getDb } from '@/server/db/client';
+import { withDb } from '@/server/db/client';
 import { settingsRepository } from '@/server/repositories/settings';
 import { followUpPayloadSchema, parseJsonPayload } from '@/server/validation/coach';
 
@@ -27,10 +27,11 @@ export async function POST(request: Request) {
   }
 
   try {
-    const db = await getDb();
-    const apiKey = await settingsRepository(db).getProviderApiKey(
-      new ObjectId(user.id),
-      parsedPayload.data.provider,
+    const apiKey = await withDb((db) =>
+      settingsRepository(db).getProviderApiKey(
+        new ObjectId(user.id),
+        parsedPayload.data.provider,
+      ),
     );
     const result = await askFollowUpServer({
       ...parsedPayload.data,

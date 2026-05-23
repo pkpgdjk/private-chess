@@ -2,7 +2,7 @@ import { ObjectId } from 'mongodb';
 import { NextResponse } from 'next/server';
 
 import { requireCurrentUser } from '@/server/auth/currentUser';
-import { getDb } from '@/server/db/client';
+import { withDb } from '@/server/db/client';
 import { gamesRepository } from '@/server/repositories/games';
 import { savedGamePatchSchema } from '@/server/validation/games';
 
@@ -34,10 +34,9 @@ function unauthorizedResponse(error: unknown) {
 export async function GET(_request: Request, context: RouteContext) {
   try {
     const user = await requireCurrentUser();
-    const db = await getDb();
-    const game = await gamesRepository(db).get(
-      new ObjectId(user.id),
-      await getGameId(context),
+    const gameId = await getGameId(context);
+    const game = await withDb((db) =>
+      gamesRepository(db).get(new ObjectId(user.id), gameId),
     );
 
     if (!game) {
@@ -62,11 +61,13 @@ export async function PATCH(request: Request, context: RouteContext) {
       );
     }
 
-    const db = await getDb();
-    const game = await gamesRepository(db).patch(
-      new ObjectId(user.id),
-      await getGameId(context),
-      parsedPatch.data,
+    const gameId = await getGameId(context);
+    const game = await withDb((db) =>
+      gamesRepository(db).patch(
+        new ObjectId(user.id),
+        gameId,
+        parsedPatch.data,
+      ),
     );
 
     if (!game) {
@@ -82,10 +83,9 @@ export async function PATCH(request: Request, context: RouteContext) {
 export async function DELETE(_request: Request, context: RouteContext) {
   try {
     const user = await requireCurrentUser();
-    const db = await getDb();
-    const deleted = await gamesRepository(db).delete(
-      new ObjectId(user.id),
-      await getGameId(context),
+    const gameId = await getGameId(context);
+    const deleted = await withDb((db) =>
+      gamesRepository(db).delete(new ObjectId(user.id), gameId),
     );
 
     if (!deleted) {

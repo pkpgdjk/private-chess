@@ -477,14 +477,6 @@ export function PlayClient({ newGameRequested = false, username }: PlayClientPro
       }
 
       if (newGameRequested) {
-        await apiJson('/api/active-game', { method: 'DELETE' }).catch((error) => {
-          console.warn('Failed to clear active game before starting new board', error);
-        });
-
-        if (!isMounted) {
-          return;
-        }
-
         resetGame(useSettingsStore.getState().settings.playerColor);
         router.replace('/play');
         return;
@@ -625,9 +617,6 @@ export function PlayClient({ newGameRequested = false, username }: PlayClientPro
     }
 
     setSaveStatus('saved');
-    void apiJson('/api/active-game', { method: 'DELETE' }).catch((error) => {
-      console.warn('Failed to clear completed active game', error);
-    });
   }, [saveGame]);
 
   useEffect(() => {

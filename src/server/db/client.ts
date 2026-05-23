@@ -25,3 +25,16 @@ export async function getDb(): Promise<Db> {
 
   return client.db(env.MONGODB_DB);
 }
+
+export async function withDb<T>(
+  operation: (db: Db) => Promise<T>,
+): Promise<T> {
+  const env = getEnv();
+  const client = await getMongoClient();
+
+  try {
+    return await operation(client.db(env.MONGODB_DB));
+  } finally {
+    await client.close();
+  }
+}

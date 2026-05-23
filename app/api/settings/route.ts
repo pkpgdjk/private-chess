@@ -2,7 +2,7 @@ import { ObjectId } from 'mongodb';
 import { NextResponse } from 'next/server';
 
 import { requireCurrentUser } from '@/server/auth/currentUser';
-import { getDb } from '@/server/db/client';
+import { withDb } from '@/server/db/client';
 import { settingsRepository } from '@/server/repositories/settings';
 import { settingsPatchSchema } from '@/server/validation/settings';
 
@@ -25,9 +25,8 @@ function unauthorizedResponse(error: unknown) {
 export async function GET() {
   try {
     const user = await requireCurrentUser();
-    const db = await getDb();
-    const settings = await settingsRepository(db).getForUser(
-      new ObjectId(user.id),
+    const settings = await withDb((db) =>
+      settingsRepository(db).getForUser(new ObjectId(user.id)),
     );
 
     return NextResponse.json({ settings });
@@ -48,10 +47,11 @@ export async function PATCH(request: Request) {
       );
     }
 
-    const db = await getDb();
-    const settings = await settingsRepository(db).patchForUser(
-      new ObjectId(user.id),
-      parsedPatch.data,
+    const settings = await withDb((db) =>
+      settingsRepository(db).patchForUser(
+        new ObjectId(user.id),
+        parsedPatch.data,
+      ),
     );
 
     return NextResponse.json({ settings });

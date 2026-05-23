@@ -1,9 +1,8 @@
 import { hashSessionToken, readSessionCookie } from '@/server/auth/session';
-import {
-  findValidByTokenHash,
-  touch as touchSession,
-} from '@/server/repositories/sessions';
-import { findById } from '@/server/repositories/users';
+import { collections } from '@/server/db/collections';
+import { withDb } from '@/server/db/client';
+import type { SessionDocument } from '@/server/repositories/sessions';
+import type { UserDocument } from '@/server/repositories/users';
 
 export type CurrentUser = {
   id: string;
@@ -18,24 +17,33 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
   }
 
   const tokenHash = await hashSessionToken(token);
-  const session = await findValidByTokenHash(tokenHash);
 
-  if (!session) {
-    return null;
-  }
+  return withDb(async (db) => {
+    const sessions = db.collection<SessionDocument>(collections.sessions);
+    const users = db.collection<UserDocument>(collections.users);
+    const session = await sessions.findOne({
+      tokenHash,
+      expiresAt: { $gt: new Date() },
+    });
 
-  const user = await findById(session.userId);
+    if (!session) {
+      return null;
+    }
 
-  if (!user) {
-    return null;
-  }
+    const user = await users.findOne({
+      _id: session.userId,
+      disabled: false,
+    });
 
-  await touchSession(session._id);
+    if (!user) {
+      return null;
+    }
 
-  return {
-    id: user._id.toHexString(),
-    username: user.username,
-  };
+    return {
+      id: user._id.toHexString(),
+      username: user.username,
+    };
+  });
 }
 
 export async function requireCurrentUser(): Promise<CurrentUser> {

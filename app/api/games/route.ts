@@ -2,7 +2,7 @@ import { ObjectId } from 'mongodb';
 import { NextResponse } from 'next/server';
 
 import { requireCurrentUser } from '@/server/auth/currentUser';
-import { getDb } from '@/server/db/client';
+import { withDb } from '@/server/db/client';
 import {
   coachMemoryRepository,
   type CoachMemoryEntry,
@@ -29,8 +29,9 @@ function unauthorizedResponse(error: unknown) {
 export async function GET() {
   try {
     const user = await requireCurrentUser();
-    const db = await getDb();
-    const games = await gamesRepository(db).list(new ObjectId(user.id));
+    const games = await withDb((db) =>
+      gamesRepository(db).list(new ObjectId(user.id)),
+    );
 
     return NextResponse.json({ games });
   } catch (error) {
@@ -51,22 +52,25 @@ export async function POST(request: Request) {
     }
 
     const userId = new ObjectId(user.id);
-    const db = await getDb();
-    const savedGame = await gamesRepository(db).save(userId, parsedGame.data);
-    const { game } = savedGame;
-    let coachMemory: CoachMemoryEntry[] = [];
+    const { coachMemory, game } = await withDb(async (db) => {
+      const savedGame = await gamesRepository(db).save(userId, parsedGame.data);
+      const { game } = savedGame;
+      let coachMemory: CoachMemoryEntry[] = [];
 
-    if (savedGame.created) {
-      try {
-        coachMemory = await coachMemoryRepository(db).recordGame(
-          userId,
-          game.moveHistory,
-          game.playerColor,
-        );
-      } catch (error) {
-        console.warn('Failed to record coach memory for saved game', error);
+      if (savedGame.created) {
+        try {
+          coachMemory = await coachMemoryRepository(db).recordGame(
+            userId,
+            game.moveHistory,
+            game.playerColor,
+          );
+        } catch (error) {
+          console.warn('Failed to record coach memory for saved game', error);
+        }
       }
-    }
+
+      return { coachMemory, game };
+    });
 
     return NextResponse.json({ game, coachMemory }, { status: 201 });
   } catch (error) {

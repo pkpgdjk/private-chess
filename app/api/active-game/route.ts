@@ -2,7 +2,7 @@ import { ObjectId } from 'mongodb';
 import { NextResponse } from 'next/server';
 
 import { requireCurrentUser } from '@/server/auth/currentUser';
-import { getDb } from '@/server/db/client';
+import { withDb } from '@/server/db/client';
 import { activeGamesRepository } from '@/server/repositories/activeGames';
 import { activeGameSchema } from '@/server/validation/games';
 
@@ -25,9 +25,8 @@ function unauthorizedResponse(error: unknown) {
 export async function GET() {
   try {
     const user = await requireCurrentUser();
-    const db = await getDb();
-    const activeGame = await activeGamesRepository(db).get(
-      new ObjectId(user.id),
+    const activeGame = await withDb((db) =>
+      activeGamesRepository(db).get(new ObjectId(user.id)),
     );
 
     return NextResponse.json({ activeGame });
@@ -48,10 +47,11 @@ export async function PUT(request: Request) {
       );
     }
 
-    const db = await getDb();
-    const activeGame = await activeGamesRepository(db).put(
-      new ObjectId(user.id),
-      parsedActiveGame.data,
+    const activeGame = await withDb((db) =>
+      activeGamesRepository(db).put(
+        new ObjectId(user.id),
+        parsedActiveGame.data,
+      ),
     );
 
     return NextResponse.json({ activeGame });
@@ -63,8 +63,9 @@ export async function PUT(request: Request) {
 export async function DELETE() {
   try {
     const user = await requireCurrentUser();
-    const db = await getDb();
-    await activeGamesRepository(db).delete(new ObjectId(user.id));
+    await withDb((db) =>
+      activeGamesRepository(db).delete(new ObjectId(user.id)),
+    );
 
     return NextResponse.json({ ok: true });
   } catch (error) {

@@ -2,7 +2,7 @@ import { ObjectId } from 'mongodb';
 import { NextResponse } from 'next/server';
 
 import { requireCurrentUser } from '@/server/auth/currentUser';
-import { getDb } from '@/server/db/client';
+import { withDb } from '@/server/db/client';
 import { coachMemoryRepository } from '@/server/repositories/coachMemory';
 
 function unauthorizedResponse(error: unknown) {
@@ -16,9 +16,8 @@ function unauthorizedResponse(error: unknown) {
 export async function GET() {
   try {
     const user = await requireCurrentUser();
-    const db = await getDb();
-    const coachMemory = await coachMemoryRepository(db).list(
-      new ObjectId(user.id),
+    const coachMemory = await withDb((db) =>
+      coachMemoryRepository(db).list(new ObjectId(user.id)),
     );
 
     return NextResponse.json({ coachMemory });
@@ -30,9 +29,8 @@ export async function GET() {
 export async function DELETE() {
   try {
     const user = await requireCurrentUser();
-    const db = await getDb();
-    const deletedCount = await coachMemoryRepository(db).clear(
-      new ObjectId(user.id),
+    const deletedCount = await withDb((db) =>
+      coachMemoryRepository(db).clear(new ObjectId(user.id)),
     );
 
     return NextResponse.json({ ok: true, deletedCount });

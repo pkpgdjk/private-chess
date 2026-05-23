@@ -3,7 +3,6 @@
 import { Chess, type Move } from 'chess.js';
 import { create } from 'zustand';
 
-import { apiJson } from '@/client/api';
 import {
   createGame,
   createMoveNode,
@@ -20,10 +19,6 @@ type ActiveGameRecord = {
   updatedAt: number;
 };
 
-type ActiveGameResponse = {
-  activeGame: ActiveGameRecord | null;
-};
-
 type GameStore = GameState & {
   turn: 'w' | 'b';
   canUndo: () => boolean;
@@ -37,6 +32,7 @@ type GameStore = GameState & {
 };
 
 const ACTIVE_GAME_SAVE_DELAY_MS = 500;
+const ACTIVE_GAME_STORAGE_KEY = 'private-chess.active-game';
 const INITIAL_FEN = new Chess().fen();
 
 let saveTimer: ReturnType<typeof setTimeout> | null = null;
@@ -113,6 +109,57 @@ function lastMoveFromMove(move: Move | null): GameState['lastMove'] {
   return move ? { from: move.from, to: move.to } : null;
 }
 
+function saveActiveGameLocally(record: ActiveGameRecord) {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  window.localStorage.setItem(ACTIVE_GAME_STORAGE_KEY, JSON.stringify(record));
+}
+
+function clearActiveGameLocally() {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  window.localStorage.removeItem(ACTIVE_GAME_STORAGE_KEY);
+}
+
+function loadActiveGameLocally(): ActiveGameRecord | null {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+
+  try {
+    const rawRecord = window.localStorage.getItem(ACTIVE_GAME_STORAGE_KEY);
+
+    if (!rawRecord) {
+      return null;
+    }
+
+    const record = JSON.parse(rawRecord) as Partial<ActiveGameRecord>;
+
+    if (
+      !Array.isArray(record.history) ||
+      (record.playerColor !== 'w' && record.playerColor !== 'b') ||
+      typeof record.currentMoveIndex !== 'number'
+    ) {
+      clearActiveGameLocally();
+      return null;
+    }
+
+    return {
+      history: record.history,
+      playerColor: record.playerColor,
+      currentMoveIndex: record.currentMoveIndex,
+      updatedAt: typeof record.updatedAt === 'number' ? record.updatedAt : 0,
+    };
+  } catch {
+    clearActiveGameLocally();
+    return null;
+  }
+}
+
 function scheduleActiveGameSave(get: () => GameStore) {
   if (saveTimer) {
     clearTimeout(saveTimer);
@@ -122,19 +169,15 @@ function scheduleActiveGameSave(get: () => GameStore) {
     const { history, playerColor, currentMoveIndex, isGameOver } = get();
 
     if (isGameOver) {
+      clearActiveGameLocally();
       return;
     }
 
-    void apiJson<ActiveGameResponse>('/api/active-game', {
-      method: 'PUT',
-      body: JSON.stringify({
-        history,
-        playerColor,
-        currentMoveIndex,
-        updatedAt: Date.now(),
-      }),
-    }).catch((error) => {
-      console.warn('Failed to persist active game', error);
+    saveActiveGameLocally({
+      history,
+      playerColor,
+      currentMoveIndex,
+      updatedAt: Date.now(),
     });
   }, ACTIVE_GAME_SAVE_DELAY_MS);
 }
@@ -345,7 +388,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   },
 
   resumeActiveGame: async () => {
-    const { activeGame } = await apiJson<ActiveGameResponse>('/api/active-game');
+    const activeGame = loadActiveGameLocally();
 
     if (!activeGame) {
       return false;

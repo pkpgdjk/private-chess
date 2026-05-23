@@ -1,6 +1,6 @@
-import { ObjectId, type Collection } from 'mongodb';
+import { ObjectId } from 'mongodb';
 
-import { getDb } from '@/server/db/client';
+import { withDb } from '@/server/db/client';
 import { collections } from '@/server/db/collections';
 
 export type UserDocument = {
@@ -13,12 +13,6 @@ export type UserDocument = {
   lastLoginAt?: Date;
 };
 
-async function getUsersCollection(): Promise<Collection<UserDocument>> {
-  const db = await getDb();
-
-  return db.collection<UserDocument>(collections.users);
-}
-
 function normalizeUsername(username: string): string {
   return username.trim().toLowerCase();
 }
@@ -30,22 +24,26 @@ function toObjectId(id: ObjectId | string): ObjectId {
 export async function findByUsername(
   username: string,
 ): Promise<UserDocument | null> {
-  const users = await getUsersCollection();
+  return withDb((db) => {
+    const users = db.collection<UserDocument>(collections.users);
 
-  return users.findOne({
-    username: normalizeUsername(username),
-    disabled: false,
+    return users.findOne({
+      username: normalizeUsername(username),
+      disabled: false,
+    });
   });
 }
 
 export async function findById(
   id: ObjectId | string,
 ): Promise<UserDocument | null> {
-  const users = await getUsersCollection();
+  return withDb((db) => {
+    const users = db.collection<UserDocument>(collections.users);
 
-  return users.findOne({
-    _id: toObjectId(id),
-    disabled: false,
+    return users.findOne({
+      _id: toObjectId(id),
+      disabled: false,
+    });
   });
 }
 
@@ -53,64 +51,72 @@ export async function createUser(
   username: string,
   passwordHash: string,
 ): Promise<UserDocument> {
-  const users = await getUsersCollection();
-  const now = new Date();
-  const user: UserDocument = {
-    _id: new ObjectId(),
-    username: normalizeUsername(username),
-    passwordHash,
-    disabled: false,
-    createdAt: now,
-    updatedAt: now,
-  };
+  return withDb(async (db) => {
+    const users = db.collection<UserDocument>(collections.users);
+    const now = new Date();
+    const user: UserDocument = {
+      _id: new ObjectId(),
+      username: normalizeUsername(username),
+      passwordHash,
+      disabled: false,
+      createdAt: now,
+      updatedAt: now,
+    };
 
-  await users.insertOne(user);
+    await users.insertOne(user);
 
-  return user;
+    return user;
+  });
 }
 
 export async function setPassword(
   id: ObjectId | string,
   passwordHash: string,
 ): Promise<void> {
-  const users = await getUsersCollection();
+  await withDb(async (db) => {
+    const users = db.collection<UserDocument>(collections.users);
 
-  await users.updateOne(
-    { _id: toObjectId(id), disabled: false },
-    {
-      $set: {
-        passwordHash,
-        updatedAt: new Date(),
+    await users.updateOne(
+      { _id: toObjectId(id), disabled: false },
+      {
+        $set: {
+          passwordHash,
+          updatedAt: new Date(),
+        },
       },
-    },
-  );
+    );
+  });
 }
 
 export async function disable(id: ObjectId | string): Promise<void> {
-  const users = await getUsersCollection();
+  await withDb(async (db) => {
+    const users = db.collection<UserDocument>(collections.users);
 
-  await users.updateOne(
-    { _id: toObjectId(id) },
-    {
-      $set: {
-        disabled: true,
-        updatedAt: new Date(),
+    await users.updateOne(
+      { _id: toObjectId(id) },
+      {
+        $set: {
+          disabled: true,
+          updatedAt: new Date(),
+        },
       },
-    },
-  );
+    );
+  });
 }
 
 export async function markLogin(id: ObjectId | string): Promise<void> {
-  const users = await getUsersCollection();
-  const now = new Date();
+  await withDb(async (db) => {
+    const users = db.collection<UserDocument>(collections.users);
+    const now = new Date();
 
-  await users.updateOne(
-    { _id: toObjectId(id), disabled: false },
-    {
-      $set: {
-        lastLoginAt: now,
-        updatedAt: now,
+    await users.updateOne(
+      { _id: toObjectId(id), disabled: false },
+      {
+        $set: {
+          lastLoginAt: now,
+          updatedAt: now,
+        },
       },
-    },
-  );
+    );
+  });
 }

@@ -1,5 +1,4 @@
 import Link from 'next/link';
-import type { Route } from 'next';
 import type { ReactNode } from 'react';
 
 import styles from './AppCard.module.css';
@@ -14,7 +13,7 @@ type AppCardProps = {
 type ActionCardProps = {
   accent?: Accent;
   body: string;
-  href: Route;
+  href: string;
   icon: string;
   meta: string;
   title: string;
@@ -44,7 +43,10 @@ export function ActionCard({
   title,
 }: ActionCardProps) {
   return (
-    <Link className={classNames(styles.card, styles.interactive, accentClass[accent])} href={href}>
+    <Link
+      className={classNames(styles.card, styles.interactive, accentClass[accent])}
+      href={{ pathname: href }}
+    >
       <div className={styles.topLine}>
         <p className={styles.meta}>{meta}</p>
         <span className={styles.icon} aria-hidden="true">

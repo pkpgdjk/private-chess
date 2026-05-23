@@ -6,6 +6,7 @@ export default defineConfig([
   globalIgnores([
     '.next/**',
     '.open-next/**',
+    '.worktrees/**',
     '.wrangler/**',
     'node_modules/**',
     'playwright-report/**',

@@ -1,15 +1,23 @@
+import { ObjectId } from 'mongodb';
 import { NextResponse } from 'next/server';
 
 import { requireCurrentUser } from '@/server/auth/currentUser';
 import { toCoachErrorResponse } from '@/server/ai/errors';
 import { analyzeGameServer } from '@/server/ai/providers';
+import { getDb } from '@/server/db/client';
+import { settingsRepository } from '@/server/repositories/settings';
 import { gameStoryPayloadSchema, parseJsonPayload } from '@/server/validation/coach';
 
 export async function POST(request: Request) {
-  const unauthorized = await getUnauthorizedResponse();
+  let user;
 
-  if (unauthorized) {
-    return unauthorized;
+  try {
+    user = await requireCurrentUser();
+  } catch (error) {
+    if (error instanceof Response) {
+      return error;
+    }
+    throw error;
   }
 
   const parsedPayload = parseJsonPayload(gameStoryPayloadSchema, await readJson(request));
@@ -19,7 +27,15 @@ export async function POST(request: Request) {
   }
 
   try {
-    const result = await analyzeGameServer(parsedPayload.data);
+    const db = await getDb();
+    const apiKey = await settingsRepository(db).getProviderApiKey(
+      new ObjectId(user.id),
+      parsedPayload.data.provider,
+    );
+    const result = await analyzeGameServer({
+      ...parsedPayload.data,
+      apiKey,
+    });
 
     return NextResponse.json({ result });
   } catch (error) {
@@ -33,17 +49,5 @@ async function readJson(request: Request): Promise<unknown> {
     return await request.json();
   } catch {
     return undefined;
-  }
-}
-
-async function getUnauthorizedResponse(): Promise<Response | null> {
-  try {
-    await requireCurrentUser();
-    return null;
-  } catch (error) {
-    if (error instanceof Response) {
-      return error;
-    }
-    throw error;
   }
 }

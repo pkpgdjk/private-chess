@@ -2,13 +2,15 @@
 
 Private Chess is a Next.js chess trainer with a custom username/password login, MongoDB persistence, a mobile-first web board, browser Stockfish, and server-side AI coach routes for Anthropic or OpenAI.
 
+It is installable as a PWA. The PWA is online-only: it registers a service worker for installability but does not cache pages or provide offline gameplay.
+
 ## Stack
 
 - Next.js App Router
 - Cloudflare Workers via OpenNext
 - MongoDB Atlas
 - Custom session auth
-- `chess.js`, Zustand, Playwright, Vitest
+- `chess.js`, Zustand, Vitest
 - Anthropic Messages API and OpenAI Responses API from server routes only
 
 ## Local Development
@@ -34,13 +36,6 @@ Set at least:
 MONGODB_URI=mongodb+srv://...
 MONGODB_DB=private_chess
 AUTH_SESSION_SECRET=replace-with-at-least-32-characters
-```
-
-AI coach keys are optional:
-
-```text
-OPENAI_API_KEY=
-ANTHROPIC_API_KEY=
 ```
 
 3. Create MongoDB indexes:
@@ -73,7 +68,6 @@ npm run build
 npm run typecheck
 npm run lint
 npm run test
-npm run test:e2e
 ```
 
 User management:
@@ -94,6 +88,37 @@ npm run db:indexes
 
 This project is configured for Cloudflare Workers through OpenNext, not Cloudflare Pages.
 
+### One-time Cloudflare setup
+
+Log in locally:
+
+```bash
+npx wrangler login
+```
+
+Create a production secrets file. This file is ignored by git:
+
+```bash
+cat > .env.production <<'EOF'
+MONGODB_URI=mongodb+srv://...
+MONGODB_DB=private_chess
+AUTH_SESSION_SECRET=replace-with-at-least-32-characters
+EOF
+```
+
+Deploy once with the secrets file:
+
+```bash
+./node_modules/.bin/opennextjs-cloudflare build
+./node_modules/.bin/wrangler deploy --secrets-file .env.production
+```
+
+After the Worker has secrets, normal deploys preserve them:
+
+```bash
+npm run deploy
+```
+
 Build and preview the Worker locally:
 
 ```bash
@@ -106,17 +131,37 @@ Deploy:
 npm run deploy
 ```
 
-Configure Cloudflare environment variables or secrets for:
+The Worker declares these required Cloudflare secrets in `wrangler.jsonc`:
 
 ```text
 MONGODB_URI
 MONGODB_DB
 AUTH_SESSION_SECRET
-OPENAI_API_KEY
-ANTHROPIC_API_KEY
 ```
 
-Only server routes read AI keys. The browser never receives provider secrets.
+Each user saves their own Anthropic or OpenAI key in Settings. Keys are encrypted with `AUTH_SESSION_SECRET` before they are stored in MongoDB, and API responses only return saved-key status.
+
+### GitHub Actions deploy
+
+The deploy workflow lives at `.github/workflows/deploy-cloudflare.yml`. It runs on pushes to `main` and can also be started manually from GitHub Actions.
+
+Add these GitHub secrets under repository secrets or the `production` environment:
+
+```text
+CLOUDFLARE_ACCOUNT_ID
+CLOUDFLARE_API_TOKEN
+MONGODB_URI
+MONGODB_DB
+AUTH_SESSION_SECRET
+```
+
+The workflow installs dependencies, runs server-side checks, builds the OpenNext Worker, writes a temporary `.wrangler-secrets.env` file from GitHub secrets, and deploys with:
+
+```bash
+wrangler deploy --secrets-file .wrangler-secrets.env
+```
+
+Do not commit `.env.production`, `.env.local`, or `.wrangler-secrets.env`.
 
 ## Project Structure
 
@@ -132,9 +177,7 @@ src/
   server/             Auth, MongoDB, repositories, AI providers
   types/              Shared chess and settings types
 tests/
-  client/             Vitest client tests
   server/             Vitest server tests
-  e2e/                Playwright smoke tests
 ```
 
 ## Notes

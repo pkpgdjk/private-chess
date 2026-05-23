@@ -1,4 +1,11 @@
-import type { AnalysisRequestExtended, MoveNode } from '@/types/chess';
+import type { AnalysisRequestExtended, MoveNode, SavedGame } from '@/types/chess';
+
+type GameStoryPromptOptions = {
+  botStrength?: number;
+  language?: 'en' | 'th';
+  playerColor?: SavedGame['playerColor'];
+  result?: SavedGame['result'];
+};
 
 export function buildMoveAnalysisPrompt(req: AnalysisRequestExtended): string {
   const recent = req.moveHistorySan.slice(-12);
@@ -27,31 +34,55 @@ Recent moves: ${recentStr}
 Eval: ${evalBefore} → ${evalAfter}
 Top engine choices: ${candidatesStr}${botSection}
 
-Analyze the player's move. JSON only.${langReminder}`;
+Analyze the player's move as a thinking coach. Do not tell the user the exact move to play next. JSON only.${langReminder}`;
 }
 
-export function buildGameStoryPrompt(moveHistory: MoveNode[], language: 'en' | 'th' = 'en'): string {
+function formatCentipawns(value: number | null) {
+  return value === null ? 'N/A' : (value / 100).toFixed(2);
+}
+
+export function buildGameStoryPrompt(
+  moveHistory: MoveNode[],
+  options: GameStoryPromptOptions = {},
+): string {
+  const language = options.language ?? 'en';
   const movesText = moveHistory
     .map(
       (m) =>
         `Move ${m.moveNumber} (${m.player === 'w' ? 'White' : 'Black'}): ${m.san} | ` +
-        `Eval: ${m.evalAfter !== null ? m.evalAfter.toFixed(2) : 'N/A'} | ` +
+        `UCI: ${m.uci} | ` +
+        `Eval before: ${formatCentipawns(m.evalBefore)} | ` +
+        `Eval after: ${formatCentipawns(m.evalAfter)} | ` +
+        `Eval change: ${formatCentipawns(m.evalChange)} | ` +
         `Quality: ${m.quality ?? 'N/A'} | ` +
-        `Commentary: ${m.aiCommentary ?? 'N/A'}`
+        `Coach note: ${m.aiCommentary ?? m.aiShortCommentary ?? 'N/A'} | ` +
+        `Bot reply idea: ${m.botReplyExplanation ?? 'N/A'}`
     )
     .join('\n');
+  const finalFen = moveHistory.at(-1)?.fen ?? 'N/A';
+  const playerColor = options.playerColor
+    ? (options.playerColor === 'w' ? 'White' : 'Black')
+    : 'Unknown';
 
-  return `Create a structured narrative of the following chess game.
+  return `Create a deep coaching review of this saved chess game.
 
-Move History with Evaluations and Commentaries:
+Game context:
+Player color: ${playerColor}
+Result: ${options.result ?? 'unknown'}
+Bot strength: ${options.botStrength ?? 'unknown'}
+Total plies: ${moveHistory.length}
+Final FEN: ${finalFen}
+
+Full move history:
 ${movesText}
 
 Provide:
-1. A catchy title.
-2. Breakdown by phase (opening, middlegame, endgame) with summaries and key moves.
-3. Overall advice.
-4. Player strengths.
-5. Player weaknesses.
+1. A specific title for this game.
+2. Phase summaries that explain what changed, what the opponent wanted, and where the player lost or gained control.
+3. keyMoves: choose 4-8 concrete moves across the game. Each explanation must say what happened, what the opponent idea was, and what thinking habit to train.
+4. overallAdvice: 3-5 sentences with practical coaching, not a generic compliment.
+5. playerStrengths: 3-5 specific strengths from this game.
+6. playerWeaknesses: 3-5 trainable habits or recurring thinking mistakes from this game.
 
 Respond with valid JSON only:
 {
@@ -68,7 +99,15 @@ Respond with valid JSON only:
   "overallAdvice": "string",
   "playerStrengths": ["string"],
   "playerWeaknesses": ["string"]
-}${language === 'th' ? '\n\n‼️ ตอบเป็นภาษาไทยแบบเป็นกันเอง — Write all prose fields in casual Thai.' : ''}`;
+}
+
+Rules:
+- Do not return placeholder, unavailable, retry, or cannot-generate text.
+- If move analysis is sparse, still produce a practical coaching review from the move list.
+- Explain the real turning points. Use move numbers and SAN notation.
+- Teach thinking: opponent plan, loose pieces, forcing moves, king safety, pawn breaks, and candidate plans.
+- Do not only describe the final move. Review the whole game.
+- Keep each strength and weakness short, concrete, and actionable.${language === 'th' ? '\n\n‼️ ตอบเป็นภาษาไทยแบบเป็นกันเอง — Write all prose fields in casual Thai.' : ''}`;
 }
 
 export function buildFollowUpPrompt(
@@ -98,7 +137,7 @@ Style guide for Thai (READ THESE EXAMPLES — match this tone):
 ✓ "คุณเดิน a4 ดันเบี้ย ♙ ไปริมกระดาน แต่ตาเดินนี้ช้าและไม่ค่อยได้อะไร"
 ✓ "บอทตอบด้วย Nc6 เอา ♞ ออกมาคุมกลางกระดาน ดูดีกว่าของคุณนะ"
 ✓ "ระวัง ♛ ของบอทตรง d8 จะกินเบี้ยคุณได้ — ปกป้องด้วย"
-✓ "ลองเดิน Nf3 แทนสิ เอา ♘ ออกมาช่วยคุมกลาง"
+✓ "ก่อนเดินต่อ ลองถามตัวเองว่า ♘ ตัวไหนควรออกมาช่วยคุมกลาง"
 
 DO NOT use:
 ✗ "ท่านได้ทำการเดิน..." (formal/textbook)
@@ -148,8 +187,8 @@ Respond with ONLY valid JSON, no markdown fences:
   "shortSummary": "One sentence — what the player's move does (max 120 chars).",
   "fullExplanation": "2-3 short paragraphs MAX. Be punchy. If the bot replied, weave that in.",
   "warning": null OR "One sentence — if this was a blunder/mistake",
-  "betterMove": null OR "SAN of a better move",
-  "betterMoveExplanation": null OR "One sentence — why it's stronger",
+  "betterMove": null,
+  "betterMoveExplanation": null OR "One sentence — the stronger plan/idea, without naming the exact move",
   "strategicConcepts": ["concept1", "concept2"],
   "coachAdvice": "One sentence — focus area for next move",
   "focusSquares": ["e4", "d5"],
@@ -159,5 +198,12 @@ Respond with ONLY valid JSON, no markdown fences:
 }
 
 focusSquares: 0-4 algebraic squares (use lower-case file letters, e.g. "e4", "d5").
-tags: 0-4 short categorical tags about the move (e.g., "pin", "fork", "blunder-piece", "good-development"). Always English.`;
+tags: 0-4 short categorical tags about the move (e.g., "pin", "fork", "blunder-piece", "good-development"). Always English.
+
+COACHING STYLE:
+- Teach the player how to think; do not act like an engine.
+- Do NOT reveal a direct next move as advice. Avoid phrases like "play Nf3", "try Bb5", or "the best move is...".
+- If a better move exists internally, set "betterMove" to null and explain the idea as a plan or question instead.
+- "coachAdvice" must be a thinking cue or question, not a move command.
+- Explain what changed, what the opponent is likely aiming for, and what the player should inspect before moving.`;
 }

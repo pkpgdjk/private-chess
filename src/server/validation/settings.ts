@@ -33,6 +33,8 @@ export const settingsPatchSchema = z
     playerColor: z.enum(['w', 'b']),
     boardTheme: z.enum(['classic', 'dark', 'marble']),
     pieceSet: z.enum(['unicode', 'svg']),
+    openaiApiKey: z.string().trim().min(1).max(512),
+    anthropicApiKey: z.string().trim().min(1).max(512),
   })
   .partial()
   .strict();

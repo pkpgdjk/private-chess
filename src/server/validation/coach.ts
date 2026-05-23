@@ -108,8 +108,11 @@ const moveNodeSchema: z.ZodType<MoveNode> = z.object({
 
 export const gameStoryPayloadSchema = z
   .object({
+    botStrength: z.number().int().min(1).max(20).optional(),
     moveHistory: z.array(moveNodeSchema).max(MAX_HISTORY_PLIES),
     language: z.enum(['en', 'th']).default('en'),
+    playerColor: z.enum(['w', 'b']).optional(),
+    result: z.enum(['win', 'loss', 'draw']).optional(),
   })
   .and(coachSelectionSchema);
 

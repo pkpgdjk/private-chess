@@ -19,6 +19,8 @@ export type ChessBoardProps = {
   flipped: boolean;
   selectedSquare: string | null;
   legalMoves: string[];
+  recentEnemyMove?: { from: string; to: string } | null;
+  threatSquares?: string[];
   onSelectSquare(square: string): void;
   onMove(from: string, to: string): void;
 };
@@ -51,6 +53,8 @@ export function ChessBoard({
   flipped,
   selectedSquare,
   legalMoves,
+  recentEnemyMove = null,
+  threatSquares = [],
   onSelectSquare,
   onMove,
 }: ChessBoardProps) {
@@ -69,6 +73,7 @@ export function ChessBoard({
     return map;
   }, [pieces]);
   const legalMoveSet = useMemo(() => new Set(legalMoves), [legalMoves]);
+  const threatSquareSet = useMemo(() => new Set(threatSquares), [threatSquares]);
 
   useEffect(() => {
     return () => {
@@ -248,6 +253,9 @@ export function ChessBoard({
               const isSelected = selectedSquare === square;
               const isLegal = legalMoveSet.has(square);
               const isCapture = isLegal && Boolean(piece);
+              const isEnemyMoveFrom = recentEnemyMove?.from === square;
+              const isEnemyMoveTo = recentEnemyMove?.to === square;
+              const isThreatened = threatSquareSet.has(square);
 
               return (
                 <div
@@ -256,6 +264,9 @@ export function ChessBoard({
                     styles.square,
                     isLight ? styles.light : styles.dark,
                     isSelected ? styles.selected : '',
+                    isEnemyMoveFrom ? styles.enemyRecentFrom : '',
+                    isEnemyMoveTo ? styles.enemyRecentTo : '',
+                    isThreatened ? styles.threatened : '',
                     isLegal && !isCapture ? styles.legal : '',
                     isCapture ? styles.capture : '',
                   ]

@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title">
+  <title>Private Chess</title>
+  <rect width="512" height="512" rx="96" fill="#1e1e2e"/>
+  <path fill="#cba6f7" d="M166 394h180l18 52H148l18-52Zm28-48h124c18 0 32 14 32 32H162c0-18 14-32 32-32Zm101-53c21-15 34-38 34-64 0-40-30-73-69-78V96h-48v52h-42v48h42v99c-36 2-64 23-64 51h147v-53Zm-35-97c16 5 27 18 27 33s-11 28-27 33v-66Z"/>
+  <path fill="#f5c2e7" d="M166 394h180l9 26H157l9-26Zm46-198h48v99h-48v-99Z" opacity=".38"/>
+</svg>

@@ -12,32 +12,43 @@ import type {
   MoveNode,
 } from '@/types/chess';
 
-export async function analyzeMoveServer(req: AnalysisRequestExtended): Promise<AIAnalysisResponse> {
+export async function analyzeMoveServer(
+  req: AnalysisRequestExtended,
+  apiKey: string | null,
+): Promise<AIAnalysisResponse> {
   switch (req.coachProvider) {
     case 'openai':
-      return analyzeMoveWithOpenAI(req);
+      return analyzeMoveWithOpenAI(req, apiKey);
     case 'anthropic':
-      return analyzeMoveWithAnthropic(req);
+      return analyzeMoveWithAnthropic(req, apiKey);
     default:
       throw new Error(`Unsupported coach provider: ${String(req.coachProvider)}`);
   }
 }
 
 export async function analyzeGameServer(options: {
+  apiKey: string | null;
   provider: CoachProvider;
   model: 'haiku' | 'sonnet' | 'gpt-mini' | 'gpt';
   effort: CoachEffort;
   language: 'en' | 'th';
   moveHistory: MoveNode[];
+  playerColor?: 'w' | 'b';
+  result?: 'win' | 'loss' | 'draw';
+  botStrength?: number;
 }): Promise<GameStoryResponse> {
   if (options.provider === 'openai') {
     if (options.model !== 'gpt-mini' && options.model !== 'gpt') {
       throw new Error('OpenAI provider requires an OpenAI coach model');
     }
     return analyzeGameWithOpenAI(options.moveHistory, {
+      apiKey: options.apiKey,
+      botStrength: options.botStrength,
       model: options.model,
       effort: options.effort,
       language: options.language,
+      playerColor: options.playerColor,
+      result: options.result,
     });
   }
 
@@ -46,13 +57,18 @@ export async function analyzeGameServer(options: {
   }
 
   return analyzeGameWithAnthropic(options.moveHistory, {
+    apiKey: options.apiKey,
+    botStrength: options.botStrength,
     model: options.model,
     effort: options.effort,
     language: options.language,
+    playerColor: options.playerColor,
+    result: options.result,
   });
 }
 
 export async function askFollowUpServer(options: {
+  apiKey: string | null;
   provider: CoachProvider;
   model: 'haiku' | 'sonnet' | 'gpt-mini' | 'gpt';
   effort: CoachEffort;
@@ -64,6 +80,7 @@ export async function askFollowUpServer(options: {
       throw new Error('OpenAI provider requires an OpenAI coach model');
     }
     return askFollowUpWithOpenAI({
+      apiKey: options.apiKey,
       question: options.question,
       context: options.context,
       model: options.model,
@@ -76,6 +93,7 @@ export async function askFollowUpServer(options: {
   }
 
   return askFollowUpWithAnthropic({
+    apiKey: options.apiKey,
     question: options.question,
     context: options.context,
     model: options.model,

@@ -11,6 +11,8 @@ export const defaultSettings: Settings = {
   coachProvider: 'anthropic',
   coachModel: 'haiku',
   coachEffort: 'low',
+  hasAnthropicKey: false,
+  hasOpenAIKey: false,
   showEvalBar: true,
   showArrows: true,
   legalMoveOverlay: true,

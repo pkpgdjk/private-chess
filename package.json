@@ -15,7 +15,6 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:e2e": "playwright test",
     "user:create": "tsx scripts/users.ts create",
     "user:reset-password": "tsx scripts/users.ts reset-password",
     "user:disable": "tsx scripts/users.ts disable",
@@ -35,11 +34,9 @@
     "zustand": "5.0.13"
   },
   "devDependencies": {
-    "@playwright/test": "1.60.0",
     "@types/node": "25.7.0",
     "@types/react": "19.2.15",
     "@types/react-dom": "19.2.3",
-    "@vitejs/plugin-react": "6.0.2",
     "eslint": "9.39.4",
     "eslint-config-next": "16.2.6",
     "tsx": "4.22.3",

@@ -10,12 +10,17 @@ type SettingsResponse = {
   settings: Settings;
 };
 
+type SettingsPatch = Partial<Settings> & {
+  anthropicApiKey?: string;
+  openaiApiKey?: string;
+};
+
 type SettingsStore = {
   settings: Settings;
   isLoading: boolean;
   error: string | null;
   loadSettings: () => Promise<void>;
-  updateSettings: (patch: Partial<Settings>) => Promise<void>;
+  updateSettings: (patch: SettingsPatch) => Promise<void>;
 };
 
 export const useSettingsStore = create<SettingsStore>((set, get) => ({
@@ -39,7 +44,12 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
 
   updateSettings: async (patch) => {
     const previous = get().settings;
-    const nextSettings = { ...previous, ...patch };
+    const {
+      anthropicApiKey: _anthropicApiKey,
+      openaiApiKey: _openaiApiKey,
+      ...settingsPatch
+    } = patch;
+    const nextSettings = { ...previous, ...settingsPatch };
     set({ settings: nextSettings, error: null });
 
     try {

@@ -81,8 +81,8 @@
   border: 1px solid var(--line);
   border-radius: var(--radius);
   padding: 6px 8px;
-  background: #fffdf9;
-  color: #6f4d35;
+  background: var(--cream);
+  color: var(--coffee);
   font-size: 0.78rem;
   font-weight: 850;
   line-height: 1;
@@ -100,7 +100,7 @@
 }
 
 .moves {
-  color: #4e3b2d;
+  color: var(--cocoa);
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
   font-weight: 800;
 }

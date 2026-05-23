@@ -27,7 +27,7 @@
   border: 1px solid var(--line);
   border-radius: var(--radius);
   padding: 0 10px;
-  background: rgba(255, 250, 243, 0.76);
+  background: var(--surface-glass);
   color: var(--muted);
   font-size: 0.78rem;
   font-weight: 850;
@@ -37,11 +37,11 @@
 
 .error {
   margin: 0;
-  border: 1px solid rgba(139, 55, 45, 0.18);
+  border: 1px solid rgba(172, 77, 86, 0.18);
   border-radius: var(--radius);
   padding: 10px 12px;
-  background: #fff1ec;
-  color: #81382d;
+  background: rgba(243, 139, 168, 0.12);
+  color: #8a3d44;
   font-size: 0.9rem;
   font-weight: 750;
 }
@@ -58,9 +58,9 @@
   border-radius: var(--radius);
   padding: 14px;
   background:
-    linear-gradient(180deg, rgba(255, 253, 249, 0.94), rgba(255, 248, 238, 0.9)),
+    linear-gradient(180deg, rgba(49, 50, 68, 0.94), rgba(30, 30, 46, 0.88)),
     var(--surface);
-  box-shadow: 0 14px 32px rgba(78, 52, 38, 0.1);
+  box-shadow: var(--shadow);
 }
 
 .cardHeader {
@@ -82,7 +82,7 @@
   padding: 4px;
   border: 1px solid var(--line);
   border-radius: var(--radius);
-  background: rgba(232, 212, 200, 0.42);
+  background: rgba(241, 228, 212, 0.56);
 }
 
 .segmented button,
@@ -90,7 +90,7 @@
   min-height: 46px;
   border: 1px solid transparent;
   border-radius: var(--radius);
-  background: #fffdf9;
+  background: var(--cream);
   color: var(--text);
   font-weight: 850;
 }
@@ -106,9 +106,9 @@
 }
 
 .segmented button[aria-pressed='true'] {
-  border-color: rgba(75, 53, 36, 0.52);
-  background: #4b3524;
-  color: #fff9f2;
+  border-color: rgba(203, 166, 247, 0.44);
+  background: var(--cocoa);
+  color: #1e1e2e;
 }
 
 .segmented button:hover {
@@ -119,7 +119,7 @@
 .field {
   display: grid;
   gap: 8px;
-  color: #4e3b2d;
+  color: var(--cocoa);
   font-size: 0.9rem;
   font-weight: 820;
 }
@@ -139,7 +139,7 @@
 
 .range input {
   width: 100%;
-  accent-color: #7d5130;
+  accent-color: var(--coffee);
 }
 
 .fields {
@@ -156,10 +156,65 @@
 }
 
 .select:focus-visible,
+.secretInputRow input:focus-visible,
+.secretInputRow button:focus-visible,
 .segmented button:focus-visible,
 .toggle input:focus-visible {
-  outline: 4px solid rgba(147, 104, 63, 0.2);
+  outline: 4px solid rgba(203, 166, 247, 0.22);
   outline-offset: 2px;
+}
+
+.secretField {
+  display: grid;
+  gap: 8px;
+  color: var(--cocoa);
+  font-size: 0.9rem;
+  font-weight: 820;
+}
+
+.secretHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.secretHeader strong {
+  color: var(--muted);
+  font-size: 0.78rem;
+  white-space: nowrap;
+}
+
+.secretInputRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+}
+
+.secretInputRow input,
+.secretInputRow button {
+  min-height: 46px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  background: var(--cream);
+  color: var(--text);
+  font-weight: 850;
+}
+
+.secretInputRow input {
+  width: 100%;
+  min-width: 0;
+  padding: 0 12px;
+}
+
+.secretInputRow button {
+  padding: 0 14px;
+  cursor: pointer;
+}
+
+.secretInputRow button:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
 }
 
 .toggles {
@@ -176,7 +231,7 @@
   border: 1px solid var(--line);
   border-radius: var(--radius);
   padding: 10px 12px;
-  background: rgba(255, 253, 249, 0.74);
+  background: rgba(49, 50, 68, 0.62);
   color: var(--text);
   font-size: 0.94rem;
   font-weight: 800;
@@ -186,7 +241,7 @@
   width: 22px;
   height: 22px;
   flex: 0 0 auto;
-  accent-color: #6d8b58;
+  accent-color: var(--green);
 }
 
 @media (min-width: 660px) {

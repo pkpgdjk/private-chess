@@ -53,5 +53,6 @@ Thumbs.db
 .next/
 .open-next/
 .wrangler/
+.wrangler-secrets.env
 playwright-report/
 test-results/

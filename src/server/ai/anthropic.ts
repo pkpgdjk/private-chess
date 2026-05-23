@@ -7,7 +7,6 @@ import {
   getSystemPrompt,
 } from '@/ai/prompts';
 import { parseAIResponse, parseGameStoryResponse } from '@/ai/parser';
-import { getEnv } from '@/env';
 import { CoachProviderError } from '@/server/ai/errors';
 import type {
   AIAnalysisResponse,
@@ -33,8 +32,10 @@ type AnthropicResponse = {
 
 export async function analyzeMoveWithAnthropic(
   req: AnalysisRequestExtended,
+  apiKey: string | null,
 ): Promise<AIAnalysisResponse> {
   const text = await createAnthropicText({
+    apiKey,
     model: asAnthropicModel(req.coachModel),
     system: getSystemPrompt(req.coachLevel, req.coachLanguage ?? 'en'),
     prompt: buildMoveAnalysisPrompt(req),
@@ -46,22 +47,38 @@ export async function analyzeMoveWithAnthropic(
 export async function analyzeGameWithAnthropic(
   moveHistory: MoveNode[],
   options: {
+    apiKey: string | null;
+    botStrength?: number;
     model: AnthropicCoachModel;
     effort: CoachEffort;
     language: 'en' | 'th';
+    playerColor?: 'w' | 'b';
+    result?: 'win' | 'loss' | 'draw';
   },
 ): Promise<GameStoryResponse> {
   // Anthropic Messages has no direct equivalent to the app's effort setting.
   const text = await createAnthropicText({
+    apiKey: options.apiKey,
     model: options.model,
     system: 'You are an expert chess coach. Return only valid JSON matching the requested schema.',
-    prompt: buildGameStoryPrompt(moveHistory, options.language),
+    prompt: buildGameStoryPrompt(moveHistory, {
+      botStrength: options.botStrength,
+      language: options.language,
+      playerColor: options.playerColor,
+      result: options.result,
+    }),
+    maxTokens: 2600,
   });
 
-  return parseGameStoryResponse(text);
+  try {
+    return parseGameStoryResponse(text);
+  } catch {
+    throw new CoachProviderError('upstream', 'Anthropic returned an incomplete game review');
+  }
 }
 
 export async function askFollowUpWithAnthropic(options: {
+  apiKey: string | null;
   question: string;
   context: { fen: string; moveHistory: string[]; language?: 'en' | 'th' };
   model: AnthropicCoachModel;
@@ -69,6 +86,7 @@ export async function askFollowUpWithAnthropic(options: {
 }): Promise<string> {
   // Anthropic Messages has no direct equivalent to the app's effort setting.
   return createAnthropicText({
+    apiKey: options.apiKey,
     model: options.model,
     system: 'You are an expert chess coach. Answer concisely in plain text.',
     prompt: buildFollowUpPrompt(options.question, options.context),
@@ -76,17 +94,17 @@ export async function askFollowUpWithAnthropic(options: {
 }
 
 async function createAnthropicText(options: {
+  apiKey: string | null;
   model: AnthropicCoachModel;
   system: string;
   prompt: string;
+  maxTokens?: number;
 }): Promise<string> {
-  const { ANTHROPIC_API_KEY } = getEnv();
-
-  if (!ANTHROPIC_API_KEY) {
+  if (!options.apiKey) {
     throw new CoachProviderError('missing_config', 'Anthropic API key is not configured');
   }
 
-  const response = await fetchAnthropic(ANTHROPIC_API_KEY, options);
+  const response = await fetchAnthropic(options.apiKey, options);
 
   const payload = (await response.json().catch(() => ({}))) as AnthropicResponse;
 
@@ -103,6 +121,7 @@ async function fetchAnthropic(
     model: AnthropicCoachModel;
     system: string;
     prompt: string;
+    maxTokens?: number;
   },
 ) {
   try {
@@ -115,7 +134,7 @@ async function fetchAnthropic(
       },
       body: JSON.stringify({
         model: ANTHROPIC_MODEL_IDS[options.model],
-        max_tokens: 1200,
+        max_tokens: options.maxTokens ?? 1200,
         temperature: 0.3,
         system: options.system,
         messages: [{ role: 'user', content: options.prompt }],

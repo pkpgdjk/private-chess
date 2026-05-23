@@ -1,0 +1,59 @@
+name: Deploy Cloudflare Worker
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: cloudflare-worker-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run lint
+
+      - name: Build OpenNext Worker
+        run: ./node_modules/.bin/opennextjs-cloudflare build
+
+      - name: Write Worker secrets file
+        shell: bash
+        env:
+          MONGODB_URI: ${{ secrets.MONGODB_URI }}
+          MONGODB_DB: ${{ secrets.MONGODB_DB }}
+          AUTH_SESSION_SECRET: ${{ secrets.AUTH_SESSION_SECRET }}
+        run: |
+          for name in MONGODB_URI MONGODB_DB AUTH_SESSION_SECRET; do
+            if [ -z "${!name}" ]; then
+              echo "::error::Missing GitHub secret: ${name}"
+              exit 1
+            fi
+          done
+
+          {
+            printf 'MONGODB_URI=%s\n' "$MONGODB_URI"
+            printf 'MONGODB_DB=%s\n' "$MONGODB_DB"
+            printf 'AUTH_SESSION_SECRET=%s\n' "$AUTH_SESSION_SECRET"
+          } > .wrangler-secrets.env
+
+      - name: Deploy Worker
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: ./node_modules/.bin/wrangler deploy --secrets-file .wrangler-secrets.env

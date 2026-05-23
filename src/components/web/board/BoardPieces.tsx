@@ -1,4 +1,4 @@
-import { HORSEY_SVG } from '@/assets/horseySvg';
+import Image from 'next/image';
 
 import styles from './ChessBoard.module.css';
 import { squareToGrid } from './boardGeometry';
@@ -79,19 +79,18 @@ export function pieceAssetKey(piece: Pick<BoardPiece, 'color' | 'type'>) {
 
 export function PieceGlyph({ piece }: { piece: Pick<BoardPiece, 'color' | 'type'> }) {
   const assetKey = pieceAssetKey(piece);
-  const svg = HORSEY_SVG[assetKey];
-
-  if (!svg) {
-    return null;
-  }
 
   return (
-    <span
-      aria-label={PIECE_LABELS[assetKey]}
-      className={styles.pieceGlyph}
-      dangerouslySetInnerHTML={{ __html: svg }}
-      role="img"
-    />
+    <span aria-label={PIECE_LABELS[assetKey]} className={styles.pieceGlyph} role="img">
+      <Image
+        alt=""
+        aria-hidden="true"
+        draggable={false}
+        height={96}
+        src={`/assets/pieces/cute/${assetKey}-v3.png`}
+        width={96}
+      />
+    </span>
   );
 }
 

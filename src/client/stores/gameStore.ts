@@ -30,7 +30,7 @@ type GameStore = GameState & {
   resetGame: (playerColor?: 'w' | 'b') => void;
   selectSquare: (square: string) => void;
   makeMove: (from: string, to: string) => boolean;
-  makeBotMove: () => boolean;
+  makeBotMove: (botStrength?: number) => boolean;
   undoMove: () => void;
   resumeActiveGame: () => Promise<boolean>;
   clearHint: () => void;
@@ -119,7 +119,11 @@ function scheduleActiveGameSave(get: () => GameStore) {
   }
 
   saveTimer = setTimeout(() => {
-    const { history, playerColor, currentMoveIndex } = get();
+    const { history, playerColor, currentMoveIndex, isGameOver } = get();
+
+    if (isGameOver) {
+      return;
+    }
 
     void apiJson<ActiveGameResponse>('/api/active-game', {
       method: 'PUT',
@@ -146,12 +150,47 @@ function appendMove(
   ];
 }
 
-function applyBotFallback(chess: Chess) {
+const PIECE_VALUES: Record<Move['captured'] & string, number> = {
+  b: 3,
+  k: 0,
+  n: 3,
+  p: 1,
+  q: 9,
+  r: 5,
+};
+
+function scoreBotMove(move: Move) {
+  return (
+    (move.captured ? PIECE_VALUES[move.captured] * 10 : 0) +
+    (move.san.includes('+') ? 6 : 0) +
+    (move.san.includes('#') ? 100 : 0) +
+    (move.piece === 'p' ? 0 : 3) +
+    (move.promotion ? PIECE_VALUES[move.promotion] * 8 : 0)
+  );
+}
+
+function chooseBotMove(moves: Move[], botStrength: number) {
+  const strength = Math.min(20, Math.max(1, Math.round(botStrength)));
+
+  if (strength <= 5) {
+    return moves.at(-1) ?? null;
+  }
+
+  if (strength <= 12) {
+    return (
+      moves.find((move) => move.flags.includes('c')) ??
+      moves.find((move) => move.piece !== 'p') ??
+      moves[0] ??
+      null
+    );
+  }
+
+  return [...moves].sort((a, b) => scoreBotMove(b) - scoreBotMove(a))[0] ?? null;
+}
+
+function applyBotFallback(chess: Chess, botStrength = 10) {
   const moves = chess.moves({ verbose: true });
-  const preferredMove =
-    moves.find((move) => move.flags.includes('c')) ??
-    moves.find((move) => move.piece !== 'p') ??
-    moves[0];
+  const preferredMove = chooseBotMove(moves, botStrength);
 
   if (!preferredMove) {
     return null;
@@ -258,7 +297,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     return true;
   },
 
-  makeBotMove: () => {
+  makeBotMove: (botStrength = 10) => {
     const { history, currentMoveIndex, playerColor } = get();
     const chess = chessFromHistory(history, currentMoveIndex);
 
@@ -266,7 +305,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       return false;
     }
 
-    const move = applyBotFallback(chess);
+    const move = applyBotFallback(chess, botStrength);
 
     if (!move) {
       return false;

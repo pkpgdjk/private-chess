@@ -1,119 +1,109 @@
-import { ActionCard, AppCard } from '@/components/web/cards/AppCard';
+import Link from 'next/link';
+import Image from 'next/image';
 
+import { LogoutButton } from '@/components/web/LogoutButton';
+
+import { HomeClient } from './HomeClient';
 import styles from './page.module.css';
 
-const quickActions = [
-  {
-    accent: 'peach',
-    body: 'Start a fresh board, pick your side, and let the coach watch the key moments.',
-    href: '/play',
-    icon: 'P',
-    meta: 'Board',
-    title: 'Play a game',
-  },
-  {
-    accent: 'rose',
-    body: 'Review saved games and scan the moments that decided the result.',
-    href: '/history',
-    icon: 'H',
-    meta: 'Games',
-    title: 'Open history',
-  },
-  {
-    accent: 'green',
-    body: 'Practice common opening shapes and small tactical decisions.',
-    href: '/tactics',
-    icon: 'T',
-    meta: 'Training',
-    title: 'Train tactics',
-  },
-  {
-    accent: 'blue',
-    body: 'Tune board feel, coach behavior, bot strength, and saved-game preferences.',
-    href: '/settings',
-    icon: 'S',
-    meta: 'Profile',
-    title: 'Settings',
-  },
-] as const;
-
-const stats = [
-  { label: 'Starter lanes', value: '4' },
-  { label: 'Opening families', value: '14' },
-  { label: 'Review mode', value: 'Static' },
-] as const;
-
-const practiceNotes = [
-  {
-    body: 'Play a calm development game and watch for the first loose piece.',
-    tag: '10 min',
-    title: 'Warm board',
-  },
-  {
-    body: 'Use the tactics lane when you want quick patterns without starting a full game.',
-    tag: 'Fast',
-    title: 'Pattern snack',
-  },
+const menuLinks = [
+  { href: '/play', label: 'Continue', icon: '↗' },
+  { href: '/settings', label: 'Settings', icon: '⚙' },
+  { href: '/history', label: 'History', icon: '↺' },
 ] as const;
 
 export default function Page() {
   return (
-    <section className={styles.dashboard} aria-labelledby="home-title">
-      <header className={styles.header}>
-        <div className={styles.titleRow}>
-          <div>
-            <p className="eyebrow">Private Chess</p>
-            <h1 id="home-title">Your chess desk</h1>
+    <section className={styles.home} aria-labelledby="home-title">
+      <div className={styles.brandRow}>
+        <Image
+          alt=""
+          aria-hidden="true"
+          height={760}
+          priority
+          src="/assets/logo-v3.png"
+          width={456}
+        />
+        <div>
+          <strong>Purrmate</strong>
+          <span>Chess for everyone</span>
+        </div>
+        <div className={styles.homeActions}>
+          <LogoutButton />
+        </div>
+      </div>
+
+      <div className={styles.hero}>
+        <div className={styles.copy}>
+          <h1 id="home-title">
+            <span>Cute</span> moves.
+            <br />
+            <span>Clever</span> victories.
+          </h1>
+          <p>A cozy chess experience for thinkers of all levels.</p>
+        </div>
+
+        <Image
+          alt=""
+          aria-hidden="true"
+          className={styles.heroPiece}
+          height={760}
+          priority
+          src="/assets/logo-v3.png"
+          width={456}
+        />
+
+        <div className={styles.startPanel}>
+          <HomeClient />
+        </div>
+
+        <nav className={styles.menu} aria-label="Home shortcuts">
+          {menuLinks.map((item) => (
+            <Link className={styles.menuLink} href={item.href} key={item.href}>
+              <span>{item.icon}</span>
+              {item.label}
+            </Link>
+          ))}
+        </nav>
+      </div>
+
+      <section className={styles.recent} aria-label="Recent games and stats">
+        <div className={styles.recentList}>
+          <div className={styles.sectionTitle}>
+            <p className="eyebrow">Recent Games</p>
+            <Link href="/history">View all</Link>
           </div>
-          <span className={styles.statusPill}>Ready to train</span>
+          <div className={styles.gameRow}>
+            <span>Midnight Meow</span>
+            <small>18 moves · Level 10</small>
+            <strong>Win</strong>
+          </div>
+          <div className={styles.gameRow}>
+            <span>Cotton Whiskers</span>
+            <small>32 moves · Level 15</small>
+            <strong data-loss="true">Loss</strong>
+          </div>
+          <div className={styles.gameRow}>
+            <span>Velvet Castle</span>
+            <small>24 moves · Level 4</small>
+            <strong data-draw="true">Draw</strong>
+          </div>
         </div>
-        <p className={styles.summary}>
-          Jump straight into a game, review your archive, or run a compact practice lane.
-        </p>
-      </header>
-
-      <div className={styles.quickGrid} aria-label="Quick actions">
-        {quickActions.map((action) => (
-          <ActionCard
-            accent={action.accent}
-            body={action.body}
-            href={action.href}
-            icon={action.icon}
-            key={action.href}
-            meta={action.meta}
-            title={action.title}
-          />
-        ))}
-      </div>
-
-      <div className={styles.sectionHeader}>
-        <h2>Snapshot</h2>
-        <span>Fallback content</span>
-      </div>
-      <div className={styles.statGrid} aria-label="App snapshot">
-        {stats.map((stat) => (
-          <AppCard className={styles.statCard} key={stat.label}>
-            <strong className={styles.statValue}>{stat.value}</strong>
-            <p className={styles.statLabel}>{stat.label}</p>
-          </AppCard>
-        ))}
-      </div>
-
-      <div className={styles.practiceGrid} aria-label="Practice ideas">
-        <div className={styles.sectionHeader}>
-          <h2>Next up</h2>
-          <span>Small drills</span>
+        <div className={styles.stats}>
+          <div>
+            <strong>1250</strong>
+            <span>Rating</span>
+          </div>
+          <div>
+            <strong>12</strong>
+            <span>Win Streak</span>
+          </div>
+          <div>
+            <strong>78%</strong>
+            <span>Win Rate</span>
+          </div>
         </div>
-        {practiceNotes.map((note) => (
-          <AppCard className={styles.lessonCard} key={note.title}>
-            <div className={styles.lessonTop}>
-              <h3 className={styles.lessonName}>{note.title}</h3>
-              <span className={styles.lessonTag}>{note.tag}</span>
-            </div>
-            <p className={styles.lessonBody}>{note.body}</p>
-          </AppCard>
-        ))}
-      </div>
+      </section>
     </section>
   );
 }

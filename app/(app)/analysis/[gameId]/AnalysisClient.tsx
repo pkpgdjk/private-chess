@@ -4,7 +4,13 @@ import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 
 import { apiJson } from '@/client/api';
-import type { MoveNode, MoveQuality, SavedGame } from '@/types/chess';
+import { useSettingsStore } from '@/client/stores/settingsStore';
+import type { GameStoryResponse, MoveNode, MoveQuality, SavedGame, Settings } from '@/types/chess';
+import {
+  buildLocalGameReview,
+  coerceGameReview,
+  isUnavailableGameReview,
+} from '@/utils/gameReview';
 import {
   buildAccuracyPoints,
   deriveCoachMemoryUpdates,
@@ -14,6 +20,12 @@ import styles from './analysis.module.css';
 
 type GameResponse = {
   game: SavedGame;
+};
+
+type AiReviewState = {
+  status: 'idle' | 'loading' | 'ready' | 'error';
+  result: GameStoryResponse | null;
+  error: string | null;
 };
 
 type AnalysisClientProps = {
@@ -207,10 +219,122 @@ function LearningNotes({ game }: { game: SavedGame }) {
   );
 }
 
+export function canRunAiGameReview(settings: Settings) {
+  return settings.coachProvider === 'openai'
+    ? settings.hasOpenAIKey
+    : settings.hasAnthropicKey;
+}
+
+export function AiGameReviewPanel({
+  game,
+  hasProviderKey,
+  isSettingsLoading,
+  onAnalyze,
+  review,
+}: {
+  game: SavedGame;
+  hasProviderKey: boolean;
+  isSettingsLoading: boolean;
+  onAnalyze: () => void;
+  review: AiReviewState;
+}) {
+  const isBusy = review.status === 'loading';
+
+  return (
+    <section className={styles.panel} aria-labelledby="ai-review-title">
+      <div className={styles.sectionTitle}>
+        <p className="eyebrow">AI Coach</p>
+        <h2 id="ai-review-title">Move-by-move review</h2>
+      </div>
+      <p className={styles.aiReviewIntro}>
+        Ask the coach to read all {game.moveHistory.length} moves, explain the
+        turning points, and give you one clear training focus.
+      </p>
+      <button
+        className={styles.aiReviewButton}
+        disabled={isBusy || isSettingsLoading}
+        onClick={onAnalyze}
+        type="button"
+      >
+        {isBusy ? 'thinking...' : review.result ? 'Refresh AI analysis' : 'AI analyze game'}
+      </button>
+      {!hasProviderKey ? (
+        <p className={styles.aiReviewHint}>
+          Save an API key for the selected provider in Settings to use AI review.
+        </p>
+      ) : null}
+      {review.error ? (
+        <p className={styles.aiReviewError} role="alert">
+          {review.error}
+        </p>
+      ) : null}
+      {review.status === 'idle' && !review.result ? (
+        <div className={styles.emptyPanel}>
+          No AI review yet. Run analysis when you want deeper coaching for this game.
+        </div>
+      ) : null}
+      {review.result ? (
+        <article className={styles.aiReview}>
+          <h3>{review.result.title}</h3>
+          <p>{review.result.overallAdvice}</p>
+          <div className={styles.aiReviewColumns}>
+            <div>
+              <strong>Strengths</strong>
+              <ul>
+                {review.result.playerStrengths.map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
+            </div>
+            <div>
+              <strong>Training focus</strong>
+              <ul>
+                {review.result.playerWeaknesses.map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
+            </div>
+          </div>
+          <div className={styles.aiReviewPhases}>
+            {review.result.phases.map((phase) => (
+              <section key={phase.phase}>
+                <strong>{phase.phase}</strong>
+                <p>{phase.summary}</p>
+                {phase.keyMoves.length > 0 ? (
+                  <ol>
+                    {phase.keyMoves.map((move) => (
+                      <li key={`${phase.phase}-${move.moveNumber}-${move.san}`}>
+                        <span>{move.moveNumber}. {move.san}</span>
+                        {move.explanation}
+                      </li>
+                    ))}
+                  </ol>
+                ) : null}
+              </section>
+            ))}
+          </div>
+        </article>
+      ) : null}
+    </section>
+  );
+}
+
 export function AnalysisClient({ gameId }: AnalysisClientProps) {
   const [game, setGame] = useState<SavedGame | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [aiReview, setAiReview] = useState<AiReviewState>({
+    status: 'idle',
+    result: null,
+    error: null,
+  });
+  const settings = useSettingsStore((state) => state.settings);
+  const isSettingsLoading = useSettingsStore((state) => state.isLoading);
+  const loadSettings = useSettingsStore((state) => state.loadSettings);
+
+  useEffect(() => {
+    void loadSettings();
+  }, [loadSettings]);
 
   useEffect(() => {
     let isMounted = true;
@@ -219,6 +343,7 @@ export function AnalysisClient({ gameId }: AnalysisClientProps) {
       setIsLoading(true);
       setError(null);
       setGame(null);
+      setAiReview({ status: 'idle', result: null, error: null });
 
       try {
         const { game: loadedGame } = await apiJson<GameResponse>(
@@ -254,6 +379,69 @@ export function AnalysisClient({ gameId }: AnalysisClientProps) {
     () => game?.moveHistory.slice(0, 6).map((move) => move.san).join(' ') ?? '',
     [game],
   );
+  const hasProviderKey = canRunAiGameReview(settings);
+
+  const runAiReview = async () => {
+    if (!game) {
+      return;
+    }
+
+    const localReview = buildLocalGameReview({
+      history: game.moveHistory,
+      playerColor: game.playerColor,
+      result: game.result,
+      botStrength: game.botStrength,
+    }, settings.coachLanguage);
+
+    if (!hasProviderKey) {
+      setAiReview({
+        status: 'error',
+        result: localReview,
+        error: 'AI review needs a saved API key for the selected provider.',
+      });
+      return;
+    }
+
+    setAiReview({ status: 'loading', result: null, error: null });
+
+    try {
+      const { result } = await apiJson<{ result: GameStoryResponse }>('/api/coach/game-story', {
+        method: 'POST',
+        body: JSON.stringify({
+          botStrength: game.botStrength,
+          moveHistory: game.moveHistory,
+          language: settings.coachLanguage,
+          playerColor: game.playerColor,
+          provider: settings.coachProvider,
+          model: settings.coachModel,
+          result: game.result,
+          effort: settings.coachEffort,
+        }),
+      });
+      const usedLocalFallback = isUnavailableGameReview(result);
+
+      setAiReview({
+        status: usedLocalFallback ? 'error' : 'ready',
+        result: coerceGameReview(result, {
+          history: game.moveHistory,
+          playerColor: game.playerColor,
+          result: game.result,
+          botStrength: game.botStrength,
+        }, settings.coachLanguage),
+        error: usedLocalFallback
+          ? 'AI returned an unusable review, so this is local coaching from your saved moves.'
+          : null,
+      });
+    } catch (reviewError) {
+      setAiReview({
+        status: 'error',
+        result: localReview,
+        error: reviewError instanceof Error
+          ? reviewError.message
+          : 'AI review failed. Showing local coaching instead.',
+      });
+    }
+  };
 
   return (
     <section className={styles.page} aria-labelledby="analysis-title">
@@ -303,6 +491,16 @@ export function AnalysisClient({ gameId }: AnalysisClientProps) {
             </div>
             <MoveList moves={game.moveHistory} />
           </section>
+
+          <AiGameReviewPanel
+            game={game}
+            hasProviderKey={hasProviderKey}
+            isSettingsLoading={isSettingsLoading}
+            onAnalyze={() => {
+              void runAiReview();
+            }}
+            review={aiReview}
+          />
 
           <section className={styles.panel} aria-labelledby="memory-title">
             <div className={styles.sectionTitle}>

@@ -15,13 +15,9 @@ export function parseAIResponse(text: string): AIAnalysisResponse {
 }
 
 export function parseGameStoryResponse(text: string): GameStoryResponse {
-  try {
-    const cleaned = extractJson(text);
-    const parsed = JSON.parse(cleaned);
-    return validateGameStoryResponse(parsed);
-  } catch (err) {
-    return createFallbackStoryResponse(err instanceof Error ? err.message : 'Unknown parsing error');
-  }
+  const cleaned = extractJson(text);
+  const parsed = JSON.parse(cleaned);
+  return validateGameStoryResponse(parsed);
 }
 
 function extractJson(text: string): string {
@@ -98,19 +94,23 @@ function validateGameStoryResponse(parsed: unknown): GameStoryResponse {
 
   const obj = parsed as Record<string, unknown>;
 
-  const title = parseString(obj.title, 'Game Story');
+  const title = parseRequiredString(obj.title, 'title');
   const phases = parsePhases(obj.phases);
-  const overallAdvice = parseString(obj.overallAdvice, 'Keep practicing!');
+  const overallAdvice = parseRequiredString(obj.overallAdvice, 'overallAdvice');
   const playerStrengths = parseStringArray(obj.playerStrengths);
   const playerWeaknesses = parseStringArray(obj.playerWeaknesses);
 
-  return {
+  const response = {
     title,
     phases,
     overallAdvice,
     playerStrengths,
     playerWeaknesses,
   };
+
+  assertUsableGameStory(response);
+
+  return response;
 }
 
 function parseQuality(value: unknown): MoveQuality {
@@ -125,6 +125,13 @@ function parseString(value: unknown, defaultValue: string): string {
     return value;
   }
   return defaultValue;
+}
+
+function parseRequiredString(value: unknown, field: string): string {
+  if (typeof value !== 'string' || value.trim().length === 0) {
+    throw new Error(`Missing required game-review field: ${field}`);
+  }
+  return value.trim();
 }
 
 function parseNullableString(value: unknown): string | null {
@@ -250,7 +257,7 @@ function parsePhases(value: unknown): GameStoryResponse['phases'] {
       if (!phase || typeof phase !== 'object') return null;
 
       const phaseName = (phase as Record<string, unknown>).phase;
-      const summary = parseString((phase as Record<string, unknown>).summary, '');
+      const summary = parseString((phase as Record<string, unknown>).summary, '').trim();
       const keyMovesRaw = (phase as Record<string, unknown>).keyMoves;
 
       const phaseValue =
@@ -264,9 +271,9 @@ function parsePhases(value: unknown): GameStoryResponse['phases'] {
         keyMovesRaw.forEach((km) => {
           if (km && typeof km === 'object') {
             const moveNumber = Number((km as Record<string, unknown>).moveNumber);
-            const san = parseString((km as Record<string, unknown>).san, '');
-            const explanation = parseString((km as Record<string, unknown>).explanation, '');
-            if (!Number.isNaN(moveNumber)) {
+            const san = parseString((km as Record<string, unknown>).san, '').trim();
+            const explanation = parseString((km as Record<string, unknown>).explanation, '').trim();
+            if (!Number.isNaN(moveNumber) && san && explanation) {
               keyMoves.push({ moveNumber, san, explanation });
             }
           }
@@ -276,6 +283,30 @@ function parsePhases(value: unknown): GameStoryResponse['phases'] {
       return { phase: phaseValue, summary, keyMoves };
     })
     .filter((p): p is GameStoryResponse['phases'][number] => p !== null);
+}
+
+function assertUsableGameStory(response: GameStoryResponse) {
+  const keyMoveCount = response.phases.reduce((count, phase) => count + phase.keyMoves.length, 0);
+
+  if (response.phases.length === 0) {
+    throw new Error('Game review has no phases');
+  }
+
+  if (response.phases.some((phase) => phase.summary.trim().length < 40)) {
+    throw new Error('Game review phase summary is too shallow');
+  }
+
+  if (keyMoveCount < 2) {
+    throw new Error('Game review must include at least two concrete key moves');
+  }
+
+  if (response.overallAdvice.trim().length < 50) {
+    throw new Error('Game review overall advice is too shallow');
+  }
+
+  if (response.playerStrengths.length < 2 || response.playerWeaknesses.length < 2) {
+    throw new Error('Game review must include multiple strengths and weaknesses');
+  }
 }
 
 function createFallbackResponse(): AIAnalysisResponse {
@@ -292,21 +323,5 @@ function createFallbackResponse(): AIAnalysisResponse {
     tags: [],
     botReplySan: null,
     botReplyExplanation: null,
-  };
-}
-
-function createFallbackStoryResponse(error: string): GameStoryResponse {
-  return {
-    title: 'Game Story Unavailable',
-    phases: [
-      {
-        phase: 'opening',
-        summary: `Could not generate story: ${error}`,
-        keyMoves: [],
-      },
-    ],
-    overallAdvice: 'Please try generating the game story again.',
-    playerStrengths: [],
-    playerWeaknesses: [],
   };
 }

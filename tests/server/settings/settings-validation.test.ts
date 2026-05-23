@@ -17,15 +17,28 @@ describe('settingsPatchSchema', () => {
     });
   });
 
-  it('rejects API key fields', () => {
+  it('accepts provider API key fields', () => {
     expect(
       settingsPatchSchema.safeParse({
         openaiApiKey: 'sk-test',
       }).success,
-    ).toBe(false);
+    ).toBe(true);
+    expect(
+      settingsPatchSchema.safeParse({
+        anthropicApiKey: 'sk-ant-test',
+      }).success,
+    ).toBe(true);
+  });
+
+  it('rejects generic API key fields', () => {
     expect(
       settingsPatchSchema.safeParse({
         apiKey: 'secret',
+      }).success,
+    ).toBe(false);
+    expect(
+      settingsPatchSchema.safeParse({
+        openaiApiKey: '',
       }).success,
     ).toBe(false);
   });
@@ -52,14 +65,24 @@ describe('settingsPatchSchema', () => {
   });
 
   it('stays complete with default settings keys', () => {
-    const parsed = settingsPatchSchema.safeParse(defaultSettings);
-    const defaultKeys = Object.keys(defaultSettings).sort();
+    const {
+      hasAnthropicKey: _hasAnthropicKey,
+      hasOpenAIKey: _hasOpenAIKey,
+      ...patchableDefaults
+    } = defaultSettings;
+    const parsed = settingsPatchSchema.safeParse(patchableDefaults);
+    const defaultKeys = Object.keys(patchableDefaults).sort();
+    const patchKeys = [
+      ...defaultKeys,
+      'anthropicApiKey',
+      'openaiApiKey',
+    ].sort();
 
     if (!parsed.success) {
       throw new Error('defaultSettings should be accepted by settingsPatchSchema');
     }
 
     expect(Object.keys(parsed.data).sort()).toEqual(defaultKeys);
-    expect(Object.keys(settingsPatchSchema.shape).sort()).toEqual(defaultKeys);
+    expect(Object.keys(settingsPatchSchema.shape).sort()).toEqual(patchKeys);
   });
 });

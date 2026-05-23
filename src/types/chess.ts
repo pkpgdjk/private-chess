@@ -72,6 +72,10 @@ export interface Settings {
   coachModel: CoachModel;
   /** Effort level for reasoning-capable models. Ignored by models that do not support it. */
   coachEffort: CoachEffort;
+  /** Whether the current user has saved an Anthropic API key. Secret value is never returned. */
+  hasAnthropicKey: boolean;
+  /** Whether the current user has saved an OpenAI API key. Secret value is never returned. */
+  hasOpenAIKey: boolean;
   showEvalBar: boolean;
   showArrows: boolean;
   legalMoveOverlay: boolean;

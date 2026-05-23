@@ -117,7 +117,7 @@ describe('coach payload bounds', () => {
 describe('toCoachErrorResponse', () => {
   it('maps expected provider failures without leaking raw messages', () => {
     expect(toCoachErrorResponse(
-      new CoachProviderError('missing_config', 'OPENAI_API_KEY is not configured'),
+      new CoachProviderError('missing_config', 'OpenAI API key is not configured'),
     )).toEqual({
       status: 503,
       body: { error: 'AI coach is not configured' },
